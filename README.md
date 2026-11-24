@@ -20,7 +20,7 @@
 | Часть | Технологии |
 |---|---|
 | Фронтенд | React 19 · Vite · TypeScript · PWA (Workbox, Dexie) · Tailwind · i18next |
-| Бэкенд | ASP.NET Core (.NET 10) · EF Core · PostgreSQL · JWT · OpenAPI/Scalar · xUnit |
+| Бэкенд | ASP.NET Core (.NET 9) · EF Core · PostgreSQL · JWT · OpenAPI/Scalar · xUnit |
 | ИИ | Claude API: `claude-opus-5-5` — генерация текстов, `claude-haiku-5-5` — оценка вопросов |
 | Деплой | Собственный сервер · Docker Compose · Caddy (HTTPS) |
 
@@ -56,6 +56,8 @@ suraq-qoi-app/
 ## Использованные инструменты
 
 По п. 6.3 положения хакатона: React, Vite, Tailwind CSS, Dexie, ASP.NET Core, EF Core, PostgreSQL, Docker, Caddy, Claude API (Anthropic). При разработке использовался AI-ассистент Claude.
+
+Дизайн интерфейса — по мотивам [Queezy – Quiz App UI Kit](https://www.figma.com/community/file/1178996093139112052/free-queezy-quiz-app-ui-kit) (Illiyin Studio), лицензия [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ## Команда
 

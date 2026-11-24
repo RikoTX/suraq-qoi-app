@@ -1,0 +1,16 @@
+# Локальная база для разработки: docker compose up -d
+services:
+  postgres:
+    image: postgres:17
+    container_name: suraqqoi-postgres
+    environment:
+      POSTGRES_DB: suraqqoi
+      POSTGRES_USER: suraqqoi
+      POSTGRES_PASSWORD: dev-only-password
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

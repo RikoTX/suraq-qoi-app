@@ -1,8 +1,75 @@
 # ТЗ: Сұрақ қой — Обыграй ИИ
 
-Версия 2.0 · 25.11.2026 · Órleu Hack 2026, кейс 3 «Образование: читать и понимать»
+Версия 2.1 · 25.11.2026 · Órleu Hack 2026, кейс 3 «Образование: читать и понимать»
 
 Дедлайн сдачи: **27.11.2026 23:00 (Астана)**. Внутренний дедлайн: **27.11 19:00**.
+
+---
+
+## 0. Статус проекта
+
+Работаем по этапам: один этап — одна законченная функция, которую можно показать. Следующий этап начинаем, когда предыдущий проверен.
+
+| Этап | Что появляется | Задачи | Статус |
+|---|---|---|---|
+| 1. Авторизация | Вход, регистрация, роли ученик / учитель / админ | A1 | ✅ Готово |
+| 2. Классы | Учитель создаёт класс и код; ученик вступает по коду; учитель видит список учеников | T1, S1, T2 | ⬜ Следующий |
+| 3. Тексты | Генерация текстов через Claude, проверка человеком, выдача ученику пакетом | C1, S2 | ⬜ |
+| 4. Сессия ученика | Чтение → 3 вопроса → вывод → итог с оценкой Claude | S3, S4 | ⬜ |
+| 5. Слабый интернет | PWA-кеш, очередь отправки, предварительная оценка правилами | S4, S5 | ⬜ |
+| 6. Игровая часть | Очки, ранги, стрик, главная ученика | S6 | ⬜ |
+| 7. Панель учителя | Карта навыков, профиль ученика, правка оценки | T3, T4 | ⬜ |
+| 8. Финал | Демо-данные, деплой на сервер, презентация, видео | D1, P1 | ⬜ |
+
+### 0.1 Что уже сделано
+
+**Бэкенд (`backend/`)**
+
+- [x] ASP.NET Core Web API, .NET 9
+- [x] EF Core + PostgreSQL, все таблицы раздела 6, миграция `Initial`
+- [x] Локальная БД в Docker (`backend/docker-compose.yml`, порт **5433**)
+- [x] `GET /health`
+- [x] `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` (раздел 7.0)
+- [x] JWT с ролью в claims, BCrypt для паролей
+- [x] Админ создаётся автоматически из `Admin:Email` / `Admin:Password`
+- [x] Ошибки в формате ProblemDetails, ошибки полей — ValidationProblem
+
+**Фронтенд (`frontend/`)**
+
+- [x] React 19 + Vite + TypeScript + Tailwind v4
+- [x] Тема Queezy в `src/index.css` (раздел 1.1)
+- [x] Логотип «С-облачко» (`components/Logo.tsx`, `public/logo.svg`, `public/favicon.svg`)
+- [x] Экраны `/login` и `/register` с выбором роли
+- [x] `AuthContext`: токен в localStorage, проверка через `/api/auth/me`, выход
+- [x] Защита маршрутов: гость → `/login`, вошедший → `/`
+- [x] Прокси `/api` → `http://localhost:8080`
+
+**Проверено вручную:** регистрация ученика и учителя, ошибки полей, занятый email, неверный пароль, вход админа, сохранение входа после перезагрузки, выход.
+
+### 0.2 Что осталось
+
+Всё из этапов 2–8. Подробно — разделы 2, 7, 8, 9, 10, 11. Следующий шаг — **этап 2 (классы)**:
+
+- [ ] Бэк: `POST /api/classes`, `GET /api/classes` (только `teacher`), генерация уникального `join_code` вида `8A-4821`
+- [ ] Бэк: `POST /api/student/join-class` (только `student`), `GET /api/classes/{id}/students`
+- [ ] Фронт: главная учителя — список классов, кнопка «Создать класс», показ кода
+- [ ] Фронт: главная ученика — если нет класса, экран ввода кода
+- [ ] Главная `/` показывает свой экран по роли (сейчас общая заглушка)
+
+### 0.3 Локальный запуск
+
+```bash
+cd backend
+docker compose up -d          # PostgreSQL на localhost:5433
+dotnet ef database update     # применить миграции (нужен dotnet-ef)
+dotnet run                    # API на http://localhost:8080
+
+cd ../frontend
+npm install
+npm run dev                   # http://localhost:5173
+```
+
+Тестовый админ для локальной разработки — в `backend/appsettings.Development.json` (на сервере задаётся через переменные окружения).
 
 ---
 
@@ -18,25 +85,75 @@ PWA для учеников 7–9 классов. Ученик читает ко
 - Целевое устройство: дешёвый Android, Chrome, экран от 360 px.
 - Claude вызывается **только с сервера**. Ключ API на клиенте запрещён.
 
+### 1.1 Дизайн
+
+Основа — **[Queezy – Quiz App UI Kit](https://www.figma.com/community/file/1178996093139112052/free-queezy-quiz-app-ui-kit)** (Illiyin Studio, лицензия CC BY 4.0 — автора указываем в README и на слайде с инструментами). Копия команды: [Figma](https://www.figma.com/design/Zu6my6jto2dJ7DanFAIuUx/-FREE--Queezy---Quiz-App-UI-Kit--Community-?node-id=1-2).
+
+В бесплатной версии 5 экранов: главная, поиск, профиль, статистика, рейтинг. Экранов входа, чтения текста и ввода вопроса там нет — делаем их сами в том же стиле.
+
+| Экран нашего приложения | На что опираться в Queezy |
+|---|---|
+| Вход, регистрация (готово) | Общий стиль: фиолетовая шапка + белый лист снизу |
+| Главная ученика | Экран 1 (Home): приветствие, карточка «Recent quiz», список |
+| Профиль, ранг, бейджи | Экран 3 (Profile): аватар, плашка с очками, сетка бейджей |
+| Статистика | Экран 4 (Stats): круговой прогресс, график по категориям |
+| Рейтинг класса | Экран 5 (Leaderboard): пьедестал 1–2–3, список |
+| Выбор текста | Экран 2 (Discover): поиск, вкладки, карточки со стрелкой |
+| Панель учителя (веб) | Цвета и карточки Queezy; раскладка — таблица + карточки |
+
+Дизайн-токены (уже в `frontend/src/index.css`, использовать только их, без своих hex-цветов):
+
+| Токен Tailwind | Значение | Где |
+|---|---|---|
+| `primary` | `#6a5ae0` | Шапки, основные кнопки, активные элементы |
+| `primary-dark` | `#5545d1` | Hover основных кнопок |
+| `primary-soft` | `#efeefc` | Фон карточек, вторичные кнопки, выбранный вариант |
+| `ink` | `#0c092a` | Основной текст |
+| `muted` | `#858494` | Подписи, плейсхолдеры |
+| `line` | `#e6e6e6` | Рамки полей |
+| `pink` / `pink-soft` | `#ff8fa2` / `#ffd6dd` | Акценты, логотип, плашки ошибок |
+| `danger` | `#e5484d` | Текст ошибок |
+| Шрифт `font-sans` | Rubik 400/500/600/700 | Весь интерфейс |
+
+Правила:
+
+- Мобайл-фёрст: ширина контента `max-w-md`, экран от 360 px.
+- Скругления: поля и кнопки `rounded-2xl`, нижний лист `rounded-t-[32px]`, карточки `rounded-3xl`.
+- Готовые компоненты: `Logo`, `AuthLayout`, `TextField`, `Button` (`primary` / `secondary`), `RoleSwitch` — переиспользовать, не дублировать.
+- Тексты интерфейса пока на русском; казахский добавляется через i18n на этапе 4–5.
+
+### 1.2 Логотип
+
+Знак **«С-облачко»**: буква «С» из «Сұрақ» в виде облачка реплики — «спроси». Выбран из трёх концептов.
+
+| Файл | Что |
+|---|---|
+| `frontend/src/components/Logo.tsx` | Белый знак на розовой плитке (`pink`), размер через `size` |
+| `frontend/public/favicon.svg` | Иконка вкладки: та же плитка |
+| `frontend/public/logo.svg` | Одноцветный знак в `primary` (`#6a5ae0`) — для документов и презентации |
+
+Правила: знак не растягивать и не поворачивать; на фиолетовом фоне — розовая плитка с белым знаком; минимальный размер 16 px. Осталось (этап 8): PNG-иконки 192/512 для установки на телефон, горизонтальная версия «знак + Сұрақ қой» для презентации.
+
 ## 2. Объём работ
 
 ### 2.1 MVP (обязательно к 27.11)
 
-| ID | Функция |
-|---|---|
-| S1 | Вход ученика по коду класса + имя, выбор языка |
-| S2 | Пакет текстов кешируется на устройстве (IndexedDB) |
-| S3 | Сессия «Обыграй ИИ»: выбор текста → чтение → 3 вопроса → вывод → итог |
-| S4 | Оценка вопроса Claude онлайн; при таймауте — предварительная оценка правилами на устройстве |
-| S5 | Очередь отправки: ничего не теряется при обрыве связи, повторная отправка без дублей |
-| S6 | Очки, ранг, стрик на главной |
-| T1 | Регистрация и вход учителя (email + пароль), создание класса, код класса |
-| T2 | Список учеников класса: ранг, очки, последняя активность |
-| T3 | Карта навыков класса: распределение вопросов по уровням за 7 и 28 дней |
-| T4 | Профиль ученика: все вопросы с оценками, ручная правка уровня |
-| C1 | Генерация 20–30 текстов (50% kk / 50% ru) через Claude + ручная проверка |
-| D1 | Сид демо-данных: класс из 15 учеников, история за 14 дней |
-| P1 | Деплой на собственный сервер: Docker Compose + HTTPS |
+| ID | Функция | Этап | Статус |
+|---|---|---|---|
+| A1 | Регистрация и вход с ролями: ученик, учитель, админ | 1 | ✅ |
+| T1 | Учитель создаёт класс и получает код класса | 2 | ⬜ |
+| S1 | Ученик вступает в класс по коду | 2 | ⬜ |
+| T2 | Список учеников класса: ранг, очки, последняя активность | 2 | ⬜ |
+| C1 | Генерация 20–30 текстов (50% kk / 50% ru) через Claude + ручная проверка | 3 | ⬜ |
+| S2 | Пакет текстов кешируется на устройстве (IndexedDB) | 3 | ⬜ |
+| S3 | Сессия «Обыграй ИИ»: выбор текста → чтение → 3 вопроса → вывод → итог | 4 | ⬜ |
+| S4 | Оценка вопроса Claude онлайн; при таймауте — предварительная оценка правилами | 4–5 | ⬜ |
+| S5 | Очередь отправки: ничего не теряется при обрыве связи, повтор без дублей | 5 | ⬜ |
+| S6 | Очки, ранг, стрик на главной ученика | 6 | ⬜ |
+| T3 | Карта навыков класса: распределение вопросов по уровням за 7 и 28 дней | 7 | ⬜ |
+| T4 | Профиль ученика: все вопросы с оценками, ручная правка уровня | 7 | ⬜ |
+| D1 | Сид демо-данных: класс из 15 учеников, история за 14 дней | 8 | ⬜ |
+| P1 | Деплой на собственный сервер: Docker Compose + HTTPS | 8 | ⬜ |
 
 ### 2.2 Если успеваем (по приоритету)
 
@@ -59,7 +176,7 @@ Telegram-бот для родителей, панель завуча и отде
 ┌──────────────────────┐   HTTPS / JSON    ┌──────────────────────────────────────┐   HTTPS   ┌────────────┐
 │ frontend (PWA)       │ ────────────────► │ VPS: 2 vCPU / 4 GB / 50 GB NVMe       │ ────────► │ Claude API │
 │ React + Vite + TS    │                   │  caddy      :443  TLS, статика фронта │           └────────────┘
-│ Service Worker кеш   │ ◄──────────────── │  api        :8080 ASP.NET Core .NET 10│
+│ Service Worker кеш   │ ◄──────────────── │  api        :8080 ASP.NET Core .NET 9 │
 │ IndexedDB (Dexie)    │                   │  postgres   :5432 только внутр. сеть  │
 │ outbox + эвристика   │                   └──────────────────────────────────────┘
 └──────────────────────┘
@@ -78,10 +195,10 @@ Telegram-бот для родителей, панель завуча и отде
 | UI | Tailwind CSS v4, Recharts (панель учителя) |
 | Кеш и офлайн | vite-plugin-pwa (Workbox), Dexie (IndexedDB) |
 | i18n | i18next, react-i18next (`kk`, `ru`) |
-| API | ASP.NET Core, **.NET 10 (LTS)**, Minimal APIs |
-| ORM | EF Core 10 + Npgsql |
+| API | ASP.NET Core, **.NET 9**, Minimal APIs |
+| ORM | EF Core 9 + Npgsql |
 | БД | PostgreSQL 17 |
-| Авторизация | JWT Bearer (учитель), токен устройства (ученик), хеширование паролей BCrypt |
+| Авторизация | JWT Bearer для всех ролей, хеширование паролей BCrypt |
 | Документация API | OpenAPI + Scalar (`/scalar`) |
 | ИИ | Claude API, официальный C# SDK (`Anthropic` в NuGet) |
 | Тесты | xUnit |
@@ -106,27 +223,32 @@ suraq-qoi-app/
 
 ### 5.1 Архитектура фронтенда (`frontend/`)
 
+✅ — уже есть в коде, остальное — план.
+
 ```
 frontend/
 ├── src/
-│   ├── app/                    # роутер, провайдеры, i18n
-│   ├── pages/
-│   │   ├── student/            # Join, Home, TextPick, Read, Ask, Conclude, Result
-│   │   └── teacher/            # Login, Classes, ClassOverview, StudentProfile
-│   ├── components/             # переиспользуемые UI-компоненты
-│   ├── api/                    # HTTP-клиент с таймаутом, типы DTO (раздел 7)
-│   ├── offline/                # db.ts (Dexie), outbox.ts (очередь), pack.ts (тексты)
-│   ├── scoring/                # heuristic.ts (раздел 9.3), points.ts (раздел 10)
-│   └── locales/{kk,ru}.json
-├── public/                     # иконки PWA 192/512
-└── vite.config.ts              # PWA, прокси /api → localhost:8080
+│   ├── App.tsx                 ✅ маршруты, RequireAuth / GuestOnly
+│   ├── main.tsx                ✅
+│   ├── index.css               ✅ Tailwind + тема Queezy (раздел 1.1)
+│   ├── auth/                   ✅ api.ts (login/register/me, ApiError), AuthContext.tsx (AuthProvider), useAuth.ts
+│   ├── components/             ✅ Logo, AuthLayout, TextField, Button, RoleSwitch
+│   ├── pages/                  ✅ LoginPage, RegisterPage, HomePage (заглушка)
+│   │   ├── student/            #    этапы 2–6: JoinClass, Home, TextPick, Read, Ask, Conclude, Result
+│   │   └── teacher/            #    этапы 2, 7: Classes, ClassOverview, StudentProfile
+│   ├── api/                    #    этап 2+: общий HTTP-клиент с таймаутом, DTO (вынести из auth/api.ts)
+│   ├── offline/                #    этап 5: db.ts (Dexie), outbox.ts, pack.ts
+│   ├── scoring/                #    этапы 5–6: heuristic.ts (раздел 9.3), points.ts (раздел 10)
+│   └── locales/{kk,ru}.json    #    i18n
+├── public/                     #    иконки PWA 192/512
+└── vite.config.ts              ✅ Tailwind, прокси /api → localhost:8080; PWA — этап 5
 ```
 
 Слои и правила:
 
 | Слой | Отвечает за | Правило |
 |---|---|---|
-| `pages/` | Экраны и навигацию | Не ходят в сеть напрямую — только через `api/` и `offline/` |
+| `pages/` | Экраны и навигацию | Не ходят в сеть напрямую — только через `auth/`, `api/` и `offline/` |
 | `api/` | HTTP-запросы, DTO | Каждый запрос с таймаутом; ученик — 8 с |
 | `offline/` | IndexedDB, очередь отправки, пакет текстов | Источник данных для экранов ученика; сеть — только синхронизация |
 | `scoring/` | Предварительная оценка и очки | Чистые функции, без React и сети; совпадают с бэкендом |
@@ -135,32 +257,38 @@ frontend/
 
 | Путь | Экран | Задача |
 |---|---|---|
-| `/join` | Вход по коду класса | S1 |
-| `/` | Главная: ранг, очки, стрик | S6 |
+| `/login` | Вход (все роли) | A1 ✅ |
+| `/register` | Регистрация с выбором роли «ученик / учитель» | A1 ✅ |
+| `/` | Главная. Сейчас — заглушка «Вы вошли как …»; дальше — своя для каждой роли | A1 ✅ / S6 |
+| `/join-class` | Ученик вводит код класса | S1 |
 | `/texts` | Выбор текста | S3 |
 | `/session/:id/read` → `/ask` → `/conclude` → `/result` | Сессия | S3, S4 |
-| `/teacher/login` | Вход учителя | T1 |
 | `/teacher` | Мои классы | T1 |
 | `/teacher/classes/:id` | Класс: ученики, карта навыков | T2, T3 |
 | `/teacher/students/:id` | Профиль ученика | T4 |
 
 ### 5.2 Архитектура бэкенда (`backend/`)
 
+✅ — уже есть в коде, остальное — план.
+
 ```
 backend/
-├── SuraqQoi.Api.csproj
-├── Program.cs                  # DI, auth, OpenAPI, маршруты
-├── Data/                       # AppDbContext, сущности, Migrations/
-├── Features/                   # эндпоинты по фичам
-│   ├── Auth/                   # register, login
-│   ├── Student/                # join, me, pack, sessions
-│   └── Teacher/                # classes, overview, students, questions
+├── SuraqQoi.Api.csproj         ✅
+├── Program.cs                  ✅ DI, JWT, ProblemDetails, /health, маршруты
+├── appsettings.json            ✅ (+ appsettings.Development.json — локальные значения)
+├── docker-compose.yml          ✅ локальный PostgreSQL на порту 5433
+├── Auth/                       ✅ AuthEndpoints (register/login/me), JwtTokenService, AdminSeeder
+├── Data/                       ✅ AppDbContext, Entities.cs (User + UserRole, классы, тексты, сессии…)
+├── Migrations/                 ✅ Initial
+├── Features/                   #    новые эндпоинты — по папке на фичу
+│   ├── Classes/                #    этап 2: создать класс, список, вступить по коду
+│   ├── Student/                #    этапы 3–6: pack, sessions, me
+│   └── Teacher/                #    этап 7: overview, профиль ученика, правка уровня
 ├── Services/
 │   ├── Grading/                # IGradingService, ClaudeGradingService, HeuristicGrader, Prompts/
 │   ├── Scoring/                # PointsCalculator (очки, ранги, стрик)
 │   └── Content/                # генерация текстов через Claude
-├── appsettings.json
-├── Dockerfile
+├── Dockerfile                  #    этап 8
 ├── tests/                      # xUnit: PointsCalculator, HeuristicGrader, идемпотентность sessions
 │                               # (исключить из сборки API: <Compile Remove="tests/**" /> в csproj)
 └── deploy/
@@ -184,9 +312,9 @@ backend/
 
 | Таблица | Поля |
 |---|---|
-| `teachers` | `id`, `email` (unique), `password_hash`, `name`, `school`, `created_at` |
-| `classes` | `id`, `teacher_id` → teachers, `name` («8А»), `join_code` (unique, «8A-4821»), `lang` (`kk`/`ru`), `created_at` |
-| `students` | `id`, `class_id` → classes, `name` (только имя), `device_token_hash` (SHA-256), `interests` (text[]), `points`, `streak`, `last_active_date`, `created_at` |
+| `users` | `id`, `email` (unique), `password_hash` (BCrypt), `name`, `role` (`Student` / `Teacher` / `Admin`), `created_at` |
+| `classes` | `id`, `teacher_id` → users, `name` («8А»), `join_code` (unique, «8A-4821»), `lang` (`kk`/`ru`), `created_at` |
+| `students` | `id`, `user_id` → users (unique, 1:1), `class_id` → classes (null до вступления в класс), `interests` (text[]), `points`, `streak`, `last_active_date`, `created_at` |
 | `texts` | `id`, `lang`, `topic`, `kind`, `difficulty` (1–5), `title`, `body` (markdown, 150–300 слов), `example_questions` (jsonb: уровень → вопрос), `hints` (jsonb), `reviewed` (bool), `updated_at` |
 | `sessions` | `id`, `student_id`, `text_id`, `conclusion`, `conclusion_score` (0–20), `points`, `started_at`, `finished_at`, `received_at` |
 | `questions` | `id`, `session_id`, `position` (1–3), `body`, `level_local` (0–4), `level_ai` (0–4, null = не оценено), `ai_comment`, `ai_hint`, `level_teacher` (null), `created_at` |
@@ -198,22 +326,35 @@ backend/
 
 Итоговый уровень вопроса: `level_teacher ?? level_ai ?? level_local`.
 
-Доступ: учитель видит только свои классы (фильтр по `teacher_id` из JWT в каждом запросе). Ученик видит только свои данные (по токену устройства).
+Роли:
+
+| Роль | Как появляется | Доступ |
+|---|---|---|
+| `student` | Регистрация с выбором «Я ученик» → создаются `users` + `students` | Только свои данные |
+| `teacher` | Регистрация с выбором «Я учитель» | Только свои классы (фильтр по `teacher_id` из JWT) |
+| `admin` | Не регистрируется через форму. Создаётся при старте API из настроек `Admin:Email` / `Admin:Password` | Всё |
 
 ## 7. API
 
 Базовый путь `/api`. JSON, `camelCase`. Ошибки — `ProblemDetails` (RFC 9457).
 
-Авторизация:
+Авторизация для всех ролей: `Authorization: Bearer <jwt>`, срок жизни 7 дней. Claims: `sub` (id), `email`, `name`, `role` (`student` / `teacher` / `admin`). Доступ по роли — `RequireAuthorization(p => p.RequireRole("teacher"))`.
 
-- Учитель: `Authorization: Bearer <jwt>`, срок жизни 7 дней.
-- Ученик: `X-Device-Token: <token>`; сервер сравнивает SHA-256 токена с `students.device_token_hash`.
+### 7.0 Авторизация (этап 1, готово)
+
+| Метод | Путь | Описание |
+|---|---|---|
+| POST | `/api/auth/register` | `{ name, email, password, role: "student" \| "teacher" }` → `{ token, user }`. 400 — ошибки полей (`errors.name/email/password/role`), email занят |
+| POST | `/api/auth/login` | `{ email, password }` → `{ token, user }`. 401 — неверный email или пароль |
+| GET | `/api/auth/me` | `user` = `{ id, name, email, role }`. 401 — без токена |
+
+Правила: email приводится к нижнему регистру; пароль ≥ 8 символов; имя 2–80 символов; роль `admin` через регистрацию запрещена.
 
 ### 7.1 Ученик
 
 | Метод | Путь | Описание |
 |---|---|---|
-| POST | `/api/student/join` | `{ joinCode, name, lang }` → `{ studentId, deviceToken, className }`. 404 — код не найден |
+| POST | `/api/student/join-class` | `{ joinCode }` → вступление ученика в класс (этап 2). 404 — код не найден |
 | GET | `/api/student/me` | `{ name, points, rank, streak }` |
 | GET | `/api/student/pack?lang=kk&since=<iso>` | Тексты с `reviewed = true` и `updated_at > since` → `{ version, texts[] }` |
 | POST | `/api/student/sessions` | Upsert пачки сессий (≤ 20) + оценка Claude. Ответ ниже |
@@ -245,8 +386,6 @@ backend/
 
 | Метод | Путь | Описание |
 |---|---|---|
-| POST | `/api/auth/register` | `{ email, password, name, school }` → `{ token }` |
-| POST | `/api/auth/login` | `{ email, password }` → `{ token }` |
 | GET | `/api/classes` | Классы учителя |
 | POST | `/api/classes` | `{ name, lang }` → класс с `joinCode` |
 | GET | `/api/classes/{id}/overview` | Ученики (ранг, очки, последняя активность), карта навыков 7/28 дней, сигналы |
@@ -284,7 +423,7 @@ db.version(1).stores({
   sessions:  'id, textId, finishedAt',
   questions: 'id, sessionId',
   outbox:    '++seq, sessionId',
-  meta:      'key'   // studentId, deviceToken, packVersion, points, streak
+  meta:      'key'   // packVersion, points, streak (токен — в AuthContext)
 });
 ```
 
@@ -416,7 +555,7 @@ db.version(1).stores({
 
 | Срок | Фронтенд | Бэкенд (C#) | Панель учителя + дизайн | Контент + питч |
 |---|---|---|---|---|
-| 25.11 | Каркас PWA, роутинг, экраны Join, Home, TextPick, Read | Сущности, миграции, auth учителя, `student/join`, `student/pack`, `/health` | Макеты, Login, Classes | Темы текстов, генерация и проверка первых 10 |
+| 25.11 | ✅ Вход и регистрация; дальше этап 2: экраны классов | ✅ Сущности, миграции, auth с ролями, `/health`; дальше классы | Макеты экранов этапов 2–4 по Queezy | Темы текстов, генерация и проверка первых 10 |
 | 26.11 | Ask, Conclude, Result, Dexie, outbox, эвристика, очки | `student/sessions` + Claude, PointsCalculator + тесты, сид | ClassOverview, StudentProfile | Тест на 5–10 школьниках, опрос |
 | 27.11 | Багфиксы, проверка на телефонах | Деплой на сервер, HTTPS, проверка под нагрузкой | Презентация (≤ 10 слайдов) | Питч-видео (≤ 3 мин), описание, сдача |
 
