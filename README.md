@@ -1,6 +1,6 @@
 # Сұрақ қой — Обыграй ИИ
 
-Офлайн-тренажёр функциональной грамотности (чтение) для учеников 7–9 классов. Ученик читает короткий текст и сам задаёт к нему вопросы, а ИИ оценивает, насколько глубоко он понял текст.
+Тренажёр функциональной грамотности (чтение) для учеников 7–9 классов, который работает при слабом интернете. Ученик читает короткий текст и сам задаёт к нему вопросы, а ИИ оценивает, насколько глубоко он понял текст.
 
 Проект для [Órleu Hack 2026](https://hackathon.kz/hackathon?slug=orleu-hack-2026), кейс 3 «Образование: читать и понимать».
 
@@ -11,40 +11,31 @@
 ## Решение
 
 - **Ученик задаёт вопросы, а не отвечает на них.** Вопрос получает уровень: найти → связать → вывести → оценить (по навыкам чтения PISA). Чем глубже вопрос, тем больше очков.
-- **Работает без интернета.** Тексты скачиваются пакетом, вопрос сразу получает предварительную оценку на устройстве. Точную оценку Claude ученик получает при синхронизации.
+- **Работает при слабом интернете.** Приложение открывается из кеша, тексты хранятся на устройстве. Claude оценивает вопрос сразу; если ответ не пришёл за 8 с, ученик видит предварительную оценку, а точная придёт позже. Ни один ответ не теряется.
 - **Казахский и русский.** Тексты о жизни в Казахстане: расписания, объявления, новости, посты.
 - **Панель учителя.** Карта навыков класса, вопросы каждого ученика, ручная правка оценки ИИ.
 
 ## Стек
 
-TypeScript · React + Vite · PWA (Workbox, Dexie) · Tailwind + shadcn/ui · Supabase (Postgres, Auth, Edge Functions) · Claude API (`claude-opus-5-5` — генерация текстов, `claude-haiku-5-5` — оценка вопросов) · Vercel
+| Часть | Технологии |
+|---|---|
+| Фронтенд | React 19 · Vite · TypeScript · PWA (Workbox, Dexie) · Tailwind · i18next |
+| Бэкенд | ASP.NET Core (.NET 10) · EF Core · PostgreSQL · JWT · OpenAPI/Scalar · xUnit |
+| ИИ | Claude API: `claude-opus-5-5` — генерация текстов, `claude-haiku-5-5` — оценка вопросов |
+| Деплой | Собственный сервер · Docker Compose · Caddy (HTTPS) |
 
-## Запуск
+## Структура
 
-```bash
-git clone https://github.com/RikoTX/suraq-qoi-app.git
-cd suraq-qoi-app
-npm install
-# создать .env.local с VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY
-npm run dev
+```
+suraq-qoi-app/
+├── frontend/      # React PWA
+├── backend/       # ASP.NET Core API + деплой
+└── docs/TZ.md     # техническое задание
 ```
 
-Backend:
+Архитектура фронтенда и бэкенда — [docs/TZ.md, раздел 5](docs/TZ.md#5-структура-репозитория).
 
-```bash
-npx supabase start
-npx supabase db reset                                     # миграции + seed.sql
-npx supabase secrets set ANTHROPIC_API_KEY=<ключ>
-npx supabase functions serve
-```
-
-Генерация текстов:
-
-```bash
-ANTHROPIC_API_KEY=<ключ> npx tsx scripts/generate-texts.ts --lang kk --topic local --kind schedule --difficulty 2 --count 5
-```
-
-> `ANTHROPIC_API_KEY` никогда не коммитится и не попадает в клиентский код.
+> `ANTHROPIC_API_KEY` и другие секреты никогда не коммитятся и не попадают в код фронтенда.
 
 ## Документация
 
@@ -64,7 +55,7 @@ ANTHROPIC_API_KEY=<ключ> npx tsx scripts/generate-texts.ts --lang kk --topic
 
 ## Использованные инструменты
 
-По п. 6.3 положения хакатона: React, Vite, Supabase, Tailwind CSS, shadcn/ui, Dexie, Recharts, Claude API (Anthropic). При разработке использовался AI-ассистент Claude.
+По п. 6.3 положения хакатона: React, Vite, Tailwind CSS, Dexie, ASP.NET Core, EF Core, PostgreSQL, Docker, Caddy, Claude API (Anthropic). При разработке использовался AI-ассистент Claude.
 
 ## Команда
 
@@ -72,5 +63,5 @@ ANTHROPIC_API_KEY=<ключ> npx tsx scripts/generate-texts.ts --lang kk --topic
 |---|---|
 | — | Капитан, контент и питч |
 | — | Фронтенд |
-| — | Бэкенд и ИИ |
+| — | Бэкенд (C#) и ИИ |
 | — | Дизайн и панель учителя |
