@@ -148,3 +148,6 @@ await DevTextSeeder.SeedAsync(app.Services, app.Environment, app.Logger);
 
 app.Run();
 return 0;
+
+/// <summary>Для интеграционных тестов (WebApplicationFactory&lt;Program&gt;).</summary>
+public partial class Program;

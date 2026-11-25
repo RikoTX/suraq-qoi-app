@@ -35,7 +35,7 @@ dotnet run                    # http://localhost:8080
 | `Features/Diagnostics/`, `Data/Diagnostics/` | Мини-диагностика (ТЗ, 11.1): `GET /api/student/diagnostic`, `POST /api/student/diagnostics`, `PUT /api/classes/{id}/diagnostic`; задания — `forms.json` (встроен в сборку, черновик — проверяет учитель) |
 | `Services/Grading/` | `OpenAiGradingService` (Groq/OpenAI, строгая схема; без ключа в Development — правилами), `GradingPrompts`, `HeuristicGrader` (копия — `frontend/src/scoring/heuristic.ts`) |
 | `Services/Scoring/PointsCalculator.cs` | Очки, ранги, стрик, «предварительные» сессии |
-| `tests/` | xUnit (`dotnet test tests`); `heuristic-cases.json` — общие примеры с фронтендом |
+| `tests/` | xUnit (`dotnet test tests`); `heuristic-cases.json` — общие примеры с фронтендом. `tests/Integration/` — настоящий API (`WebApplicationFactory`) на временной базе в Postgres из `docker compose` (или `TEST_POSTGRES`), ИИ заменён `FakeGrader`; без базы — `--filter Category!=Integration` |
 | `Services/Content/TextGenerator.cs` | Генерация текстов через Groq/OpenAI (команда `generate-texts`) |
 | `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста. `DemoSeeder` — `dotnet run -- seed-demo`: учитель `demo-teacher@suraqqoi.kz` / `demo-teacher-2026`, класс «8А (демо)», 15 учеников с PIN `1234`, история за 14 дней, диагностика до/после |
 | `Data/LibraryTransfer.cs` | `export-texts` / `import-texts file.json` — перенос общей библиотеки между базами (без дублей) |
@@ -76,7 +76,7 @@ dotnet run -- generate-texts --lang kk --topic local --kind schedule --difficult
 
 ```bash
 dotnet build                  # без ошибок
-dotnet test tests             # xUnit
+dotnet test tests             # xUnit; интеграционным нужен docker compose up -d
 ```
 
 Ручная проверка эндпоинтов — через curl или фронтенд. Для кириллицы в curl на Windows отправляй JSON в UTF-8 (Git Bash шлёт cp1251).

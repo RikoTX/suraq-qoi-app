@@ -109,7 +109,17 @@ public static class DiagnosticEndpoints
             StartedAt = req.StartedAt, TakenAt = req.FinishedAt > now ? now : req.FinishedAt, ReceivedAt = now,
         };
         db.Diagnostics.Add(d);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException e) when (DbErrors.IsUniqueViolation(e))
+        {
+            // Тот же результат пришёл параллельно (повтор из очереди) — отдаём сохранённый.
+            db.ChangeTracker.Clear();
+            var saved = await db.Diagnostics.SingleAsync(x => x.StudentId == student.Id && (x.Id == req.Id || x.Kind == req.Kind), ct);
+            return TypedResults.Ok(ToDto(saved));
+        }
         return TypedResults.Ok(ToDto(d));
     }
 

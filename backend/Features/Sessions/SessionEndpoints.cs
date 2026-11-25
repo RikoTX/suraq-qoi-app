@@ -62,61 +62,76 @@ public static class SessionEndpoints
             return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["sessions"] = ["Нет сессий для отправки"] });
 
         var now = DateTimeOffset.UtcNow;
-        var rejected = new List<Guid>();
-        var ids = uploads.Select(u => u.Id).ToList();
-        var existing = await db.Sessions.Where(s => ids.Contains(s.Id)).Select(s => new { s.Id, s.StudentId }).ToListAsync(ct);
-        var textIds = uploads.Select(u => u.TextId).Distinct().ToList();
-        var texts = await db.Texts.Where(t => textIds.Contains(t.Id)).Select(t => new { t.Id, t.Body }).ToDictionaryAsync(t => t.Id, t => t.Body, ct);
-        var questionIds = uploads.SelectMany(u => u.Questions ?? []).Select(q => q.Id).ToList();
-        var takenQuestionIds = (await db.Questions.Where(q => questionIds.Contains(q.Id)).Select(q => q.Id).ToListAsync(ct)).ToHashSet();
-
-        var accepted = new List<Guid>();
-        foreach (var u in uploads.DistinctBy(u => u.Id))
+        List<Guid> rejected = [], accepted = [];
+        // Телефон не дождался ответа и прислал ту же пачку снова, пока первая ещё обрабатывается: вставка второй
+        // упрётся в первичный ключ. Тогда перечитываем базу — эти сессии уже приняты, это обычный повтор.
+        for (var attempt = 1; ; attempt++)
         {
-            var known = existing.FirstOrDefault(e => e.Id == u.Id);
-            if (known is not null)
-            {
-                // Уже приняли раньше — повтор из очереди. Чужой id — отклоняем.
-                if (known.StudentId == student.Id) accepted.Add(u.Id);
-                else rejected.Add(u.Id);
-                continue;
-            }
-            if (!IsValid(u, texts, takenQuestionIds))
-            {
-                rejected.Add(u.Id);
-                continue;
-            }
+            rejected = [];
+            accepted = [];
+            var ids = uploads.Select(u => u.Id).ToList();
+            var existing = await db.Sessions.Where(s => ids.Contains(s.Id)).Select(s => new { s.Id, s.StudentId }).ToListAsync(ct);
+            var textIds = uploads.Select(u => u.TextId).Distinct().ToList();
+            var texts = await db.Texts.Where(t => textIds.Contains(t.Id)).Select(t => new { t.Id, t.Body }).ToDictionaryAsync(t => t.Id, t => t.Body, ct);
+            var questionIds = uploads.SelectMany(u => u.Questions ?? []).Select(q => q.Id).ToList();
+            var takenQuestionIds = (await db.Questions.Where(q => questionIds.Contains(q.Id)).Select(q => q.Id).ToListAsync(ct)).ToHashSet();
 
-            var body = texts[u.TextId];
-            var session = new Session
+            foreach (var u in uploads.DistinctBy(u => u.Id))
             {
-                Id = u.Id,
-                StudentId = student.Id,
-                TextId = u.TextId,
-                Conclusion = string.IsNullOrWhiteSpace(u.Conclusion) ? null : u.Conclusion.Trim(),
-                StartedAt = u.StartedAt,
-                FinishedAt = u.FinishedAt > now ? now : u.FinishedAt, // часы телефона могут спешить
-                ReceivedAt = now,
-            };
-            var previous = new List<string>();
-            foreach (var q in u.Questions.OrderBy(q => q.Position))
-            {
-                var text = q.Body.Trim();
-                session.Questions.Add(new Question
+                var known = existing.FirstOrDefault(e => e.Id == u.Id);
+                if (known is not null)
                 {
-                    Id = q.Id,
-                    Position = q.Position,
-                    Body = text,
-                    // Клиент считает правилами (раздел 9.3); не прислал — считаем сами.
-                    LevelLocal = (short)Math.Clamp(q.LevelLocal ?? HeuristicGrader.Level(text, body, previous), 0, HeuristicGrader.MaxLevel),
-                    CreatedAt = q.CreatedAt,
-                });
-                previous.Add(text);
+                    // Уже приняли раньше — повтор из очереди. Чужой id — отклоняем.
+                    if (known.StudentId == student.Id) accepted.Add(u.Id);
+                    else rejected.Add(u.Id);
+                    continue;
+                }
+                if (!IsValid(u, texts, takenQuestionIds))
+                {
+                    rejected.Add(u.Id);
+                    continue;
+                }
+
+                var body = texts[u.TextId];
+                var session = new Session
+                {
+                    Id = u.Id,
+                    StudentId = student.Id,
+                    TextId = u.TextId,
+                    Conclusion = string.IsNullOrWhiteSpace(u.Conclusion) ? null : u.Conclusion.Trim(),
+                    StartedAt = u.StartedAt,
+                    FinishedAt = u.FinishedAt > now ? now : u.FinishedAt, // часы телефона могут спешить
+                    ReceivedAt = now,
+                };
+                var previous = new List<string>();
+                foreach (var q in u.Questions.OrderBy(q => q.Position))
+                {
+                    var text = q.Body.Trim();
+                    session.Questions.Add(new Question
+                    {
+                        Id = q.Id,
+                        Position = q.Position,
+                        Body = text,
+                        // Клиент считает правилами (раздел 9.3); не прислал — считаем сами.
+                        LevelLocal = (short)Math.Clamp(q.LevelLocal ?? HeuristicGrader.Level(text, body, previous), 0, HeuristicGrader.MaxLevel),
+                        CreatedAt = q.CreatedAt,
+                    });
+                    previous.Add(text);
+                }
+                db.Sessions.Add(session);
+                accepted.Add(u.Id);
             }
-            db.Sessions.Add(session);
-            accepted.Add(u.Id);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                break;
+            }
+            catch (DbUpdateException e) when (DbErrors.IsUniqueViolation(e) && attempt < 3)
+            {
+                db.ChangeTracker.Clear();
+                student = await db.Students.SingleAsync(x => x.Id == student.Id, ct);
+            }
         }
-        await db.SaveChangesAsync(ct);
 
         var sessions = await db.Sessions.Where(s => accepted.Contains(s.Id))
             .Include(s => s.Questions).Include(s => s.Text).ToListAsync(ct);
