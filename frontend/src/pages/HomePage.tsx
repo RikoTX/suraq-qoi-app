@@ -1,9 +1,12 @@
+import { lazy, Suspense } from 'react'
 import type { Role } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '../components/Button'
-import { AdminHomePage } from './admin/AdminHomePage'
 import { StudentHomePage } from './student/StudentHomePage'
-import { TeacherHomePage } from './teacher/TeacherHomePage'
+
+// Экраны учителя и админа — отдельные чанки: ученику на слабом интернете их качать не нужно (ТЗ, 15).
+const TeacherHomePage = lazy(() => import('./teacher/TeacherHomePage').then((m) => ({ default: m.TeacherHomePage })))
+const AdminHomePage = lazy(() => import('./admin/AdminHomePage').then((m) => ({ default: m.AdminHomePage })))
 
 const ROLE_LABEL: Record<Role, string> = {
   student: 'Ученик',
@@ -15,9 +18,9 @@ const ROLE_LABEL: Record<Role, string> = {
 export function HomePage() {
   const { user, signOut } = useAuth()
   if (!user) return null
-  if (user.role === 'teacher') return <TeacherHomePage />
   if (user.role === 'student') return <StudentHomePage />
-  if (user.role === 'admin') return <AdminHomePage />
+  if (user.role === 'teacher') return <Suspense fallback={null}><TeacherHomePage /></Suspense>
+  if (user.role === 'admin') return <Suspense fallback={null}><AdminHomePage /></Suspense>
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
