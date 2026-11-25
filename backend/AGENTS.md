@@ -23,15 +23,20 @@ dotnet run                    # http://localhost:8080
 | Путь | Что |
 |---|---|
 | `Program.cs` | DI, JWT, ProblemDetails, `/health`, подключение эндпоинтов |
-| `Auth/` | `AuthEndpoints` (`/api/auth/register`, `/login`, `/me`), `JwtTokenService`, `AdminSeeder` |
+| `Auth/` | `AuthEndpoints` (учитель: `/api/auth/register`, `/login`, `/me`), `StudentAuthEndpoints` (ученик: `/api/auth/student/class`, `/register`, `/login` по коду + имени + PIN; сброс PIN учителем), `JwtTokenService`, `AdminSeeder` |
 | `Data/Entities.cs` | Все сущности: `User` (+ `UserRole`), `SchoolClass`, `Student`, `ReadingText`, `Session`, `Question` |
 | `Data/AppDbContext.cs` | Таблицы, индексы, связи |
 | `Migrations/` | Миграции EF Core |
 | `Features/Classes/` | Этап 2: классы учителя, вступление по коду, `GET /api/student/me` |
 | `Features/Texts/` | Этап 3: тексты класса учителя (создать, ИИ, из библиотеки, править, опубликовать), `/api/library`, `GET /api/student/pack` |
 | `Features/Admin/` | Обзор для админа: `/api/admin/stats`, `/users`, `/classes` (только чтение) |
+| `Features/Sessions/` | `POST /api/student/sessions` — приём сессий из очереди устройства, идемпотентно, оценка ИИ в бюджете 6,5 с |
+| `Features/Teacher/` | `/api/classes/{id}/overview` (карта навыков, сигналы), `/api/students/{id}`, `PATCH /api/questions/{id}` |
+| `Services/Grading/` | `OpenAiGradingService` (Groq/OpenAI, строгая схема; без ключа в Development — правилами), `GradingPrompts`, `HeuristicGrader` (копия — `frontend/src/scoring/heuristic.ts`) |
+| `Services/Scoring/PointsCalculator.cs` | Очки, ранги, стрик, «предварительные» сессии |
+| `tests/` | xUnit (`dotnet test tests`); `heuristic-cases.json` — общие примеры с фронтендом |
 | `Services/Content/TextGenerator.cs` | Генерация текстов через Groq/OpenAI (команда `generate-texts`) |
-| `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста |
+| `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста. `DemoSeeder` — `dotnet run -- seed-demo`: учитель `demo-teacher@suraqqoi.kz` / `demo-teacher-2026`, класс «8А (демо)», 15 учеников с PIN `1234`, история за 14 дней |
 | `Features/<Фича>/` | Новые эндпоинты — по папке на фичу |
 
 ## Генерация текстов
@@ -68,6 +73,7 @@ dotnet run -- generate-texts --lang kk --topic local --kind schedule --difficult
 
 ```bash
 dotnet build                  # без ошибок
+dotnet test tests             # xUnit
 ```
 
 Ручная проверка эндпоинтов — через curl или фронтенд. Для кириллицы в curl на Windows отправляй JSON в UTF-8 (Git Bash шлёт cp1251).

@@ -16,13 +16,13 @@
 |---|---|---|---|
 | 1. Авторизация | Вход, регистрация, роли ученик / учитель / админ | A1 | ✅ Готово |
 | 2. Классы | Учитель создаёт класс и код; ученик вступает по коду; учитель видит список учеников | T1, S1, T2 | ✅ Готово |
-| 2б. Вход ученика без email | Ученик входит по коду класса + имени + PIN; несколько учеников на одном телефоне | A2, A3 | ⬜ Следующий |
-| 2в. Деплой | Сервер, HTTPS, `/health` и вход работают по ссылке с телефона | P1 | ⬜ Сегодня, 25.11 |
+| 2б. Вход ученика без email | Ученик входит по коду класса + имени + PIN; несколько учеников на одном телефоне | A2, A3 | ✅ Готово |
+| 2в. Деплой | Сервер, HTTPS, `/health` и вход работают по ссылке с телефона | P1 | ⬜ Следующий (нужен сервер) |
 | 3. Тексты | Учитель ведёт тексты класса: пишет сам, генерирует ИИ или берёт из библиотеки, публикует. Ученику — пакетом, офлайн. Админ — обзор проекта | C1, S2, T6, AD1 | ✅ Готово |
-| 4. Сессия ученика | Чтение → 3 вопроса → вывод → итог с оценкой ИИ; демо-данные; диагностика и проверка оценки ИИ к пилоту 26.11 | S3, S4, D1, Q1, Q2 | ⬜ |
-| 5. Слабый интернет | PWA-кеш, очередь отправки, предварительная оценка правилами | S4, S5 | ⬜ |
-| 6. Игровая часть | Очки и ранг на главной ученика (стрик — если успеваем) | S6 | ⬜ |
-| 7. Панель учителя | Карта навыков за 7 дней, профиль ученика, правка оценки | T3, T4 | ⬜ |
+| 4. Сессия ученика | Чтение → 3 вопроса → вывод → итог с оценкой ИИ; демо-данные; диагностика и проверка оценки ИИ к пилоту 26.11 | S3, S4, D1, Q1, Q2 | ✅ S3, S4, D1 · ⬜ Q1, Q2 |
+| 5. Слабый интернет | PWA-кеш, очередь отправки, предварительная оценка правилами | S4, S5 | ✅ Готово |
+| 6. Игровая часть | Очки и ранг на главной ученика (стрик — если успеваем) | S6, S9 | ✅ Готово (со стриком) |
+| 7. Панель учителя | Карта навыков за 7 дней, профиль ученика, правка оценки | T3, T4, T5 | ✅ Готово (с сигналами) |
 | 8. Финал | Перенос в репозиторий жюри, цифры пилота на слайды, презентация, видео | R1 | ⬜ |
 
 ### 0.1 Что уже сделано
@@ -52,7 +52,7 @@
 
 ### 0.2 Что осталось
 
-Этап 2 готов: `GET /api/student/me` (класс, очки, стрик), код класса вводится в любом регистре и кириллицей («8б 4821» → `8B-4821`). Дальше — этапы 2б–8. Подробно — разделы 2, 7, 8, 9, 10, 11. Следующий шаг — **этап 2б (вход ученика без email)** и параллельно **2в (деплой)**.
+Этапы 2б, 4 (кроме Q1, Q2), 5, 6, 7 готовы — см. 0.5. Осталось: **2в (деплой на сервер)**, **Q2 (разметка 40 вопросов учителем + `eval-grading`)**, **Q1 (мини-диагностика)**, интерфейс на казахском (i18n), этап 8. Ключ ИИ нужен, чтобы проверить настоящую оценку ИИ (раздел 9.2).
 
 Сделано на этапе 2:
 
@@ -77,6 +77,18 @@ npm run dev                   # http://localhost:5173
 
 Тестовый админ для локальной разработки — в `backend/appsettings.Development.json` (на сервере задаётся через переменные окружения).
 
+Демо-данные и тесты:
+
+```bash
+cd backend
+dotnet run -- seed-demo       # учитель demo-teacher@suraqqoi.kz / demo-teacher-2026, класс «8А (демо)», PIN учеников 1234
+dotnet test tests             # xUnit: PointsCalculator, HeuristicGrader
+
+cd ../frontend
+npm run test:heuristic        # правила на устройстве = правила на сервере (общие примеры)
+npm run build && npm run preview   # проверка PWA: Service Worker работает только в сборке
+```
+
 ### 0.4 Изменения версии 2.2 (ревью 25.11)
 
 | Что | Почему | Где |
@@ -89,6 +101,32 @@ npm run dev                   # http://localhost:5173
 | Замер эффекта (Q1) и проверка оценки ИИ (Q2) | Жюри спросит, как мы знаем, что грамотность растёт и что ИИ оценивает верно, особенно на казахском | 9.4, 11.1 |
 | Деплой сегодня, демо-данные на этапе 3, урезаны этапы 6–7 | Осталось 6 этапов на 2,5 дня | 0, 2, 16 |
 | Каждый текст даёт материал для вопросов уровня 4 | Иначе ученику не к чему задать вопрос «оценить» | 12 |
+
+### 0.5 Сделано 25.11: этапы 2б–7
+
+| Что | Где в коде |
+|---|---|
+| Вход ученика: код класса → имя / «я новенький» → PIN; блокировка после 5 ошибок на 10 мин; учитель выдаёт новый PIN; лимит 30 запросов/мин с адреса | `backend/Auth/StudentAuthEndpoints.cs`, `frontend/src/pages/LoginPage.tsx` |
+| «Кто занимается?»: несколько учеников на устройстве, смена ученика без сети (PIN проверяется по локальному хешу) | `frontend/src/offline/profiles.ts` |
+| Сессия: 3 вопроса с «лестницей» уровней, подсказки, перечитать текст, вывод; итог обновляется сам, когда приходит оценка ИИ | `frontend/src/pages/student/SessionPage.tsx`, `ResultPage.tsx` |
+| `POST /api/student/sessions`: пачка ≤ 20, идемпотентно, битые сессии — в `rejected`; оценка ИИ в бюджете 6,5 с | `backend/Features/Sessions/SessionEndpoints.cs` |
+| Оценка ИИ: Groq/OpenAI, строгая JSON-схема, текст ученика — данные, а не инструкции. Без ключа в Development — правилами, с пометкой в комментарии | `backend/Services/Grading/` |
+| Правила на устройстве = правила на сервере (не выше уровня 2), общие примеры | `HeuristicGrader.cs`, `frontend/src/scoring/heuristic.ts`, `backend/tests/heuristic-cases.json` |
+| Очки, ранги, стрик; непроверенные сессии не входят в ранг | `PointsCalculator.cs`, `frontend/src/scoring/points.ts`, `ProgressCard.tsx` |
+| Очередь отправки для всех учеников устройства: 5 с → 15 с → 60 с → 5 мин, при запуске и при появлении сети | `frontend/src/offline/outbox.ts` |
+| PWA: открывается без сети после первого входа (проверено в Chromium с выключенной сетью); первая загрузка ученика ~150 КБ gzip | `frontend/vite.config.ts` |
+| Панель учителя: карта навыков за 7 дней, глубина «было/стало», сигналы, профиль ученика, правка уровня | `backend/Features/Teacher/`, `frontend/src/pages/teacher/ClassOverview.tsx`, `StudentProfilePage.tsx` |
+| Демо-класс «8А (демо)» с историей за 14 дней | `backend/Data/DevSeed/DemoSeeder.cs` |
+| Тесты: 39 xUnit + проверка правил на фронтенде | `backend/tests/`, `npm run test:heuristic` |
+
+Отличия от плана:
+
+- Имя ученика хранится в `users.name` (уникально в классе), отдельного `display_name` нет.
+- Промпт оценки — инструкция на русском, примеры на казахском и русском, ответ — на языке текста (раздел 9.2). Казахские примеры стоит показать носителю.
+- Таблица `diagnostics` (Q1) не создана — сделаем вместе с заданиями диагностики.
+- Демо-данные синтетические и помечены «(демо)»: цифры из них нельзя выдавать за результаты пилота.
+
+Не сделано: деплой (P1), Q1, Q2, интерфейс на казахском, интеграционный тест идемпотентности `sessions` (проверено вручную), оценка настоящим ИИ (нет ключа на машине разработки).
 
 ---
 
@@ -164,20 +202,20 @@ PWA для учеников 7–9 классов. Ученик читает ко
 | T1 | Учитель создаёт класс и получает код класса | 2 | ✅ |
 | S1 | Ученик вступает в класс по коду | 2 | ✅ |
 | T2 | Список учеников класса: ранг, очки, последняя активность | 2 | ✅ |
-| A2 | Ученик регистрируется и входит по коду класса + имени + PIN (без email). Учитель сбрасывает PIN | 2б | ⬜ |
-| A3 | Несколько учеников на одном устройстве: экран «Кто занимается?», быстрая смена ученика | 2б | ⬜ |
+| A2 | Ученик регистрируется и входит по коду класса + имени + PIN (без email). Учитель сбрасывает PIN | 2б | ✅ |
+| A3 | Несколько учеников на одном устройстве: экран «Кто занимается?», быстрая смена ученика | 2б | ✅ |
 | P1 | Деплой на собственный сервер: Docker Compose + HTTPS | 2в | ⬜ |
 | C1 | Библиотека 20–30 текстов (50% kk / 50% ru), сгенерированных ИИ (`generate-texts`) | 3 | ✅ 32 текста |
 | T6 | Учитель ведёт тексты класса: пишет сам, генерирует ИИ (до 5 за раз), добавляет из библиотеки; черновик → «Опубликовать» | 3 | ✅ |
 | AD1 | Админ наблюдает за проектом: сводка, учителя, ученики, классы. Контент не правит | 3 | ✅ |
-| S2 | Пакет текстов кешируется на устройстве (IndexedDB) | 3 | ⬜ |
-| D1 | Сид демо-данных: класс из 15 учеников, история за 14 дней | 4 | ⬜ |
-| S3 | Сессия «Обыграй ИИ»: выбор текста → чтение → 3 вопроса → вывод → итог | 4 | ⬜ |
-| S4 | Оценка вопроса ИИ онлайн; при таймауте — предварительная оценка правилами | 4–5 | ⬜ |
-| S5 | Очередь отправки: ничего не теряется при обрыве связи, повтор без дублей | 5 | ⬜ |
-| S6 | Очки и ранг на главной ученика | 6 | ⬜ |
-| T3 | Карта навыков класса: распределение вопросов по уровням за 7 дней | 7 | ⬜ |
-| T4 | Профиль ученика: все вопросы с оценками, ручная правка уровня | 7 | ⬜ |
+| S2 | Пакет текстов кешируется на устройстве (IndexedDB) | 3 | ✅ |
+| D1 | Сид демо-данных: класс из 15 учеников, история за 14 дней | 4 | ✅ `seed-demo` |
+| S3 | Сессия «Обыграй ИИ»: выбор текста → чтение → 3 вопроса → вывод → итог | 4 | ✅ |
+| S4 | Оценка вопроса ИИ онлайн; при таймауте — предварительная оценка правилами | 4–5 | ✅ (ИИ с ключом не проверен — ключа не было) |
+| S5 | Очередь отправки: ничего не теряется при обрыве связи, повтор без дублей | 5 | ✅ |
+| S6 | Очки и ранг на главной ученика | 6 | ✅ |
+| T3 | Карта навыков класса: распределение вопросов по уровням за 7 дней | 7 | ✅ |
+| T4 | Профиль ученика: все вопросы с оценками, ручная правка уровня | 7 | ✅ |
 | Q1 | Входная и итоговая мини-диагностика: 6 заданий формата PISA (раздел 11.1) | 4 | ⬜ |
 | Q2 | Проверочный набор: 40 вопросов с разметкой учителя, совпадение с ИИ (раздел 9.4) | 4 | ⬜ |
 | R1 | Код и README в репозитории жюри | 8 | ⬜ |
@@ -186,9 +224,9 @@ PWA для учеников 7–9 классов. Ученик читает ко
 
 | ID | Функция |
 |---|---|
-| S9 | Стрик на главной ученика |
+| S9 | Стрик на главной ученика ✅ |
 | T8 | Карта навыков за 28 дней |
-| T5 | Сигналы: «застрял», «пропал», «растёт» |
+| T5 | Сигналы: «застрял», «пропал», «растёт» ✅ |
 | S7 | Рейтинг класса за неделю, «Вопрос дня» |
 | M1 | Режим «Есеп»: вопросы к условию текстовой задачи по математике (3–5 задач) |
 | T7 | Задание классу с дедлайном + печать в PDF |
@@ -259,19 +297,19 @@ frontend/
 │   ├── App.tsx                 ✅ маршруты, RequireAuth / GuestOnly
 │   ├── main.tsx                ✅
 │   ├── index.css               ✅ Tailwind + тема Queezy (раздел 1.1)
-│   ├── auth/                   ✅ api.ts (login/register/me, ApiError), AuthContext.tsx (AuthProvider), useAuth.ts
-│   │                           #    этап 2б: вход ученика (код + имя + PIN), несколько учеников на устройстве
-│   ├── components/             ✅ Logo, AuthLayout, AppLayout, TextField, Button, RoleSwitch, Tabs, ListCard, Markdown, Select
+│   ├── auth/                   ✅ api.ts (вход учителя и ученика по PIN, ApiError), AuthContext.tsx, useAuth.ts
+│   ├── components/             ✅ Logo, AuthLayout, AppLayout, TextField, TextArea, PinField, Button, RoleSwitch, Tabs, ListCard, Markdown, Select
 │   ├── pages/                  ✅ LoginPage, RegisterPage, HomePage (экран по роли)
-│   │   ├── student/            ✅ StudentHomePage, TextList, TextReadPage; этапы 2б–6: WhoIsLearning, Ask, Conclude, Result
-│   │   ├── teacher/            ✅ TeacherHomePage, ClassPage, ClassTexts, LibraryPage, TeacherTextPage; этап 7: ClassOverview, StudentProfile
+│   │   ├── student/            ✅ StudentHomePage, ProgressCard, TextList, TextReadPage, SessionPage, ResultPage
+│   │   ├── teacher/            ✅ TeacherHomePage, ClassPage, ClassOverview, ClassTexts, LibraryPage, TeacherTextPage, StudentProfilePage
 │   │   └── admin/              ✅ AdminHomePage (обзор проекта)
-│   ├── api/                    ✅ classes.ts, texts.ts, admin.ts; дальше — общий HTTP-клиент с таймаутом
-│   ├── offline/                ✅ db.ts (Dexie), pack.ts; этапы 2б, 5: outbox.ts, profiles.ts (ученики на устройстве)
-│   ├── scoring/                #    этапы 5–6: heuristic.ts (раздел 9.3), points.ts (раздел 10)
+│   ├── api/                    ✅ classes.ts, texts.ts, sessions.ts, teacher.ts, admin.ts
+│   ├── offline/                ✅ db.ts (Dexie v2), pack.ts, outbox.ts, profiles.ts (ученики на устройстве)
+│   ├── scoring/                ✅ heuristic.ts (раздел 9.3), points.ts (раздел 10)
 │   └── locales/{kk,ru}.json    #    i18n
-├── public/                     #    иконки PWA 192/512
-└── vite.config.ts              ✅ Tailwind, прокси /api → localhost:8080; PWA — этап 5
+├── public/                     ✅ иконки PWA 192/512, apple-touch-icon
+├── scripts/check-heuristic.mjs ✅ npm run test:heuristic
+└── vite.config.ts              ✅ Tailwind, прокси /api → localhost:8080, PWA (Workbox)
 ```
 
 Слои и правила:
@@ -310,22 +348,22 @@ backend/
 ├── Program.cs                  ✅ DI, JWT, ProblemDetails, /health, маршруты
 ├── appsettings.json            ✅ (+ appsettings.Development.json — локальные значения)
 ├── docker-compose.yml          ✅ локальный PostgreSQL на порту 5433
-├── Auth/                       ✅ AuthEndpoints (register/login/me), JwtTokenService, AdminSeeder
-├── Data/                       ✅ AppDbContext, Entities.cs (User + UserRole, классы, тексты, сессии…)
-├── Migrations/                 ✅ Initial, TextOwnership
+├── Auth/                       ✅ AuthEndpoints (register/login/me), StudentAuthEndpoints (код + имя + PIN), JwtTokenService, AdminSeeder
+├── Data/                       ✅ AppDbContext, Entities.cs; DevSeed/ — примеры текстов и DemoSeeder (seed-demo)
+├── Migrations/                 ✅ Initial, TextOwnership, StudentPinLogin, SessionConclusionComment
 ├── Features/                   #    новые эндпоинты — по папке на фичу
 │   ├── Classes/                ✅ создать класс, список, ученики класса, вступить по коду, student/me
 │   ├── Texts/                  ✅ тексты класса, библиотека, генерация, pack
 │   ├── Admin/                  ✅ сводка, пользователи, классы
-│   ├── Student/                #    этапы 2б–6: вход по PIN, pack, sessions
-│   └── Teacher/                #    этап 7: overview, профиль ученика, правка уровня
+│   ├── Sessions/               ✅ POST /api/student/sessions — приём сессий и оценка ИИ
+│   └── Teacher/                ✅ overview, профиль ученика, правка уровня
 ├── Services/
-│   ├── Grading/                # IGradingService, OpenAiGradingService, HeuristicGrader, Prompts/
-│   ├── Scoring/                # PointsCalculator (очки, ранги, стрик)
+│   ├── Grading/                ✅ IGradingService, OpenAiGradingService, GradingPrompts, HeuristicGrader
+│   ├── Scoring/                ✅ PointsCalculator (очки, ранги, стрик)
 │   └── Content/                ✅ TextGenerator — генерация текстов через OpenAI-совместимый API
 ├── Dockerfile                  #    этап 8
-├── tests/                      # xUnit: PointsCalculator, HeuristicGrader, идемпотентность sessions
-│                               # (исключить из сборки API: <Compile Remove="tests/**" /> в csproj)
+├── tests/                      ✅ xUnit: PointsCalculator, HeuristicGrader (+ heuristic-cases.json — общие с фронтендом);
+│                               #    идемпотентность sessions — пока проверена вручную
 └── deploy/
     ├── docker-compose.yml      # caddy + api + postgres
     ├── Caddyfile
@@ -349,7 +387,7 @@ backend/
 |---|---|
 | `users` | `id`, `email` (unique, **null у учеников**), `password_hash` (BCrypt; у ученика — хеш PIN), `name`, `role` (`Student` / `Teacher` / `Admin`), `failed_logins`, `locked_until`, `created_at` |
 | `classes` | `id`, `teacher_id` → users, `name` («8А»), `join_code` (unique, «8A-4821»), `lang` (`kk`/`ru`), `created_at` |
-| `students` | `id`, `user_id` → users (unique, 1:1), `class_id` → classes (null только у старых учётных записей с email и у убранных из класса), `display_name` (unique в классе, «Айгерим Б.»), `interests` (text[], в MVP не используется), `points`, `streak`, `last_active_date`, `created_at` |
+| `students` | `id`, `user_id` → users (unique, 1:1), `class_id` → classes (null только у старых учётных записей с email и у убранных из класса), `interests` (text[], в MVP не используется), `points`, `streak`, `last_active_date`, `created_at`. Имя ученика — `users.name`, уникально в классе без учёта регистра («Айгерим Б.») |
 | `diagnostics` | `id`, `student_id`, `kind` (`pre` / `post`), `score` (0–6), `answers` (jsonb), `taken_at` — раздел 11.1 |
 | `texts` | `id`, `class_id` → classes (null — общая библиотека), `created_by_id` → users, `lang`, `topic`, `kind`, `difficulty` (1–5), `title`, `body` (markdown, 150–300 слов), `example_questions` (jsonb: уровень → вопрос), `hints` (jsonb), `reviewed` (bool — опубликован для учеников класса), `updated_at` |
 | `sessions` | `id`, `student_id`, `text_id`, `conclusion`, `conclusion_score` (0–20), `points`, `started_at`, `finished_at`, `received_at` |
