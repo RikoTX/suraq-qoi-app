@@ -14,7 +14,7 @@ export function TextReadPage() {
   const text = useLiveQuery(async () => (id ? ((await db.texts.get(id)) ?? null) : null), [id])
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { t, locale } = useI18n()
+  const { t, date } = useI18n()
   const past = useLiveQuery(
     async () =>
       id && user
@@ -59,7 +59,7 @@ export function TextReadPage() {
                 {past.map((s) => (
                   <li key={s.id}>
                     <Link to={`/results/${s.id}`} className="block rounded-2xl border-2 border-line px-4 py-3 text-sm hover:border-primary/40">
-                      {t('text.seeResult', { date: new Date(s.finishedAt).toLocaleDateString(locale, { day: 'numeric', month: 'long' }) })}
+                      {t('text.seeResult', { date: date(s.finishedAt) })}
                     </Link>
                   </li>
                 ))}

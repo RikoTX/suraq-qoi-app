@@ -16,13 +16,7 @@ export const RANKS: { code: RankCode; from: number; label: string; emoji: string
   { code: 'master', from: 3000, label: 'Мастер вопросов', emoji: '🏆' },
 ]
 
-export const LEVELS: { code: string; label: string; short: string }[] = [
-  { code: 'off_text', label: 'Не по тексту', short: 'мимо' },
-  { code: 'locate', label: 'Найти', short: 'найти' },
-  { code: 'connect', label: 'Связать', short: 'связать' },
-  { code: 'infer', label: 'Вывести', short: 'вывести' },
-  { code: 'evaluate', label: 'Оценить', short: 'оценить' },
-]
+// Названия уровней 0–4 — в словаре интерфейса (src/i18n, ключи level.N).
 
 /** Итоговый уровень: учитель важнее ИИ. null — ещё не проверен. */
 export const finalLevel = (q: LocalQuestion) => q.levelTeacher ?? q.levelAi

@@ -10,8 +10,10 @@ export interface I18n {
   rich: (key: Key, params: Record<string, ReactNode>) => ReactNode
   /** Сообщение ошибки (сервер отвечает на русском) на языке интерфейса */
   err: (message: string) => string
-  /** для toLocaleDateString */
+  /** для чисел и toLocale… (даты — через date) */
   locale: string
+  /** «23 ноября» / «23 қараша»; time — с часами */
+  date: (iso: string, time?: boolean) => string
 }
 
 export const I18nContext = createContext<I18n | null>(null)

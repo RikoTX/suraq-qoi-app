@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { I18nContext, type I18n } from './useI18n'
-import { LOCALE, rich, saveLang, storedLang, translate, translateError, langChosen, type UiLang } from './translate'
+import { formatDate, LOCALE, rich, saveLang, storedLang, translate, translateError, langChosen, type UiLang } from './translate'
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<UiLang>(() => {
@@ -23,6 +23,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       rich: (key, params) => rich(lang, key, params),
       err: (message) => translateError(lang, message),
       locale: LOCALE[lang],
+      date: (iso, time) => formatDate(lang, iso, time),
     }),
     [lang, setLang],
   )

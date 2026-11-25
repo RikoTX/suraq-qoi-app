@@ -60,11 +60,6 @@ export interface DiagnosticUpload {
 
 export const SKILLS: Skill[] = ['locate', 'connect', 'evaluate']
 
-export const SKILL_LABEL: Record<Skill, string> = {
-  locate: 'Найти информацию',
-  connect: 'Понять и связать',
-  evaluate: 'Оценить и поразмышлять',
-}
 
 /** Мини-диагностика (ТЗ, 11.1). */
 export const diagnosticsApi = {

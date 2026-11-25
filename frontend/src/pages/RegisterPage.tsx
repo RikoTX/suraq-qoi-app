@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { AuthLayout } from '../components/AuthLayout'
 import { Button } from '../components/Button'
 import { TextField } from '../components/TextField'
+import { useI18n } from '../i18n/useI18n'
 
 export function RegisterPage() {
   const { signIn } = useAuth()
@@ -15,6 +16,7 @@ export function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { t, err: tr } = useI18n()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -25,20 +27,21 @@ export function RegisterPage() {
       signIn(await authApi.register({ name, email, password }))
       navigate('/', { replace: true })
     } catch (err) {
-      if (err instanceof ApiError && Object.keys(err.fields).length > 0) setFieldErrors(err.fields)
-      else setError(err instanceof ApiError ? err.message : 'Что-то пошло не так')
+      if (err instanceof ApiError && Object.keys(err.fields).length > 0)
+        setFieldErrors(Object.fromEntries(Object.entries(err.fields).map(([k, v]) => [k, tr(v)])))
+      else setError(err instanceof ApiError ? tr(err.message) : t('common.error'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <AuthLayout title="Аккаунт учителя" subtitle="Ученикам регистрироваться не нужно: они входят по коду класса">
+    <AuthLayout title={t('register.title')} subtitle={t('register.sub')}>
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <TextField
-          label="Имя"
+          label={t('register.name')}
           autoComplete="given-name"
-          placeholder="Например, Айгуль Сериковна"
+          placeholder={t('register.namePlaceholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={fieldErrors.name}
@@ -55,10 +58,10 @@ export function RegisterPage() {
           required
         />
         <TextField
-          label="Пароль"
+          label={t('login.password')}
           type="password"
           autoComplete="new-password"
-          placeholder="Минимум 8 символов"
+          placeholder={t('register.passwordPlaceholder')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
@@ -72,14 +75,14 @@ export function RegisterPage() {
         )}
 
         <Button type="submit" loading={loading}>
-          Зарегистрироваться
+          {t('login.register')}
         </Button>
       </form>
 
       <p className="mt-8 text-center text-muted">
-        Уже есть аккаунт?{' '}
+        {t('register.haveAccount')}{' '}
         <Link to="/login" className="font-medium text-primary">
-          Войти
+          {t('login.signIn')}
         </Link>
       </p>
     </AuthLayout>

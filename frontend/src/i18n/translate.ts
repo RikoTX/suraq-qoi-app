@@ -25,16 +25,20 @@ export function saveLang(lang: UiLang, explicit: boolean) {
   document.documentElement.lang = lang
 }
 
-export function translate(lang: UiLang, key: Key, params?: Params): string {
-  const template = dict[lang][key] ?? ru[key]
+/** «Ещё {n} до…» + { n: 5 } → «Ещё 5 до…» */
+export function format(template: string, params?: Params): string {
   return params ? template.replace(/\{(\w+)\}/g, (m, p: string) => (p in params ? String(params[p]) : m)) : template
 }
 
-/** Строка с разметкой внутри: «Класс {name}» → «Класс <b>8А</b>» на любом языке и в любом порядке слов. */
-export function rich(lang: UiLang, key: Key, params: Record<string, ReactNode>): ReactNode {
-  const parts = dict[lang][key].split(/\{(\w+)\}/)
+/** Шаблон с разметкой внутри: «Класс {name}» → «Класс <b>8А</b>» на любом языке и в любом порядке слов. */
+export function formatRich(template: string, params: Record<string, ReactNode>): ReactNode {
+  const parts = template.split(/\{(\w+)\}/)
   return createElement(Fragment, null, ...parts.map((part, i) => (i % 2 === 1 ? (params[part] ?? `{${part}}`) : part)))
 }
+
+export const translate = (lang: UiLang, key: Key, params?: Params) => format(dict[lang][key] ?? ru[key], params)
+
+export const rich = (lang: UiLang, key: Key, params: Record<string, ReactNode>) => formatRich(dict[lang][key], params)
 
 /** Сообщение сервера или клиента на русском → язык интерфейса. */
 export function translateError(lang: UiLang, message: string): string {
@@ -45,3 +49,16 @@ export function translateError(lang: UiLang, message: string): string {
 }
 
 export const LOCALE: Record<UiLang, string> = { ru: 'ru-RU', kk: 'kk-KZ' }
+
+const KK_MONTHS = ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым', 'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан']
+
+/**
+ * «23 ноября, 17:45» / «23 қараша, 17:45». Казахские месяцы — свои: во многих браузерах и телефонах
+ * нет казахских данных Intl, и toLocaleString('kk-KZ') выдаёт «M11 23».
+ */
+export function formatDate(lang: UiLang, iso: string, time = false): string {
+  const d = new Date(iso)
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  if (lang === 'kk') return `${d.getDate()} ${KK_MONTHS[d.getMonth()]}${time ? `, ${hm}` : ''}`
+  return d.toLocaleString('ru-RU', { day: 'numeric', month: 'long', ...(time ? { hour: '2-digit', minute: '2-digit' } : {}) })
+}

@@ -105,8 +105,5 @@ export const teacherApi = {
     request<{ postOpen: boolean }>(`/classes/${classId}/diagnostic`, { method: 'PUT', body: JSON.stringify({ postOpen }) }, token),
 }
 
-export const SIGNAL_LABEL: Record<Signal, { label: string; emoji: string; hint: string }> = {
-  stuck: { label: 'Застрял', emoji: '🧱', hint: '5+ сессий за 2 недели, но ни одного вопроса «вывести» или «оценить»' },
-  inactive: { label: 'Пропал', emoji: '💤', hint: 'Нет сессий 7 дней' },
-  rising: { label: 'Растёт', emoji: '📈', hint: 'Глубоких вопросов стало на 20+ п.п. больше, чем неделей раньше' },
-}
+/** Значок сигнала; название и пояснение — в словаре учителя (signal.*). */
+export const SIGNAL_EMOJI: Record<Signal, string> = { stuck: '🧱', inactive: '💤', rising: '📈' }

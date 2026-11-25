@@ -20,8 +20,9 @@ type Props = {
 export function AppLayout({ eyebrow, title, back, header, children }: Props) {
   const { user, signOut } = useAuth()
   const { t } = useI18n()
-  // Экраны учителя пока только на русском — переключатель языка только у ученика.
+  // Ученик и учитель — на kk или ru; экраны админа только на русском.
   const student = user?.role === 'student'
+  const switchable = user?.role === 'student' || user?.role === 'teacher'
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
       <header className="relative overflow-hidden px-6 pt-10 pb-8 text-white">
@@ -38,9 +39,9 @@ export function AppLayout({ eyebrow, title, back, header, children }: Props) {
           )}
           {/* Ученик не «выходит», а уступает телефон: его данные остаются на устройстве (ТЗ, 7.0.2). */}
           <div className="flex items-center gap-2">
-            {student && <LangSwitch />}
+            {switchable && <LangSwitch />}
             <button onClick={signOut} className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-medium hover:bg-white/25">
-              {student ? t('layout.switchStudent') : 'Выйти'}
+              {student ? t('layout.switchStudent') : switchable ? t('layout.signOut') : 'Выйти'}
             </button>
           </div>
         </div>

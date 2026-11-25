@@ -7,7 +7,7 @@ import { Button } from '../../components/Button'
 import { ListCard } from '../../components/ListCard'
 import { Tabs } from '../../components/Tabs'
 import { TextField } from '../../components/TextField'
-import { pluralStudents } from './plural'
+import { useTeacherI18n } from './useTeacherI18n'
 
 /** Главная учителя: список классов и создание нового. */
 export function TeacherHomePage() {
@@ -15,30 +15,31 @@ export function TeacherHomePage() {
   const [classes, setClasses] = useState<SchoolClass[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const { t, tt, err, students } = useTeacherI18n()
 
   useEffect(() => {
     if (!token) return
     classesApi
       .list(token)
       .then(setClasses)
-      .catch((e) => setLoadError(e instanceof ApiError ? e.message : 'Не удалось загрузить классы'))
-  }, [token])
+      .catch((e) => setLoadError(e instanceof ApiError ? err(e.message) : tt('home.loadError')))
+  }, [token, err, tt])
 
   const empty = classes?.length === 0
 
   return (
-    <AppLayout eyebrow="Сәлем!" title={user?.name ?? ''}>
+    <AppLayout eyebrow={t('app.hello')} title={user?.name ?? ''}>
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Мои классы</h2>
+        <h2 className="text-xl font-semibold">{tt('home.title')}</h2>
         {!creating && classes && !empty && (
           <button onClick={() => setCreating(true)} className="text-sm font-medium text-primary">
-            + Создать
+            {tt('home.create')}
           </button>
         )}
       </div>
 
       {loadError && <p className="mt-4 rounded-2xl bg-pink-soft px-4 py-3 text-sm">{loadError}</p>}
-      {classes === null && !loadError && <p className="mt-6 text-muted">Загрузка…</p>}
+      {classes === null && !loadError && <p className="mt-6 text-muted">{t('common.loading')}</p>}
 
       {(creating || empty) && (
         <CreateClassForm
@@ -57,7 +58,7 @@ export function TeacherHomePage() {
             to={`/teacher/classes/${c.id}`}
             icon={c.name.slice(0, 3)}
             title={`${c.name} · ${LANG_LABEL[c.lang]}`}
-            subtitle={`Код ${c.joinCode} · ${c.studentCount} ${pluralStudents(c.studentCount)}`}
+            subtitle={tt('home.code', { code: c.joinCode, students: students(c.studentCount) })}
           />
         ))}
       </div>
@@ -72,6 +73,7 @@ function CreateClassForm({ onCreated, onCancel }: { onCreated: (c: SchoolClass) 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { t, tt, err: tr } = useTeacherI18n()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -82,8 +84,9 @@ function CreateClassForm({ onCreated, onCancel }: { onCreated: (c: SchoolClass) 
     try {
       onCreated(await classesApi.create(token, { name, lang }))
     } catch (err) {
-      if (err instanceof ApiError && Object.keys(err.fields).length) setErrors(err.fields)
-      else setError(err instanceof ApiError ? err.message : 'Что-то пошло не так')
+      if (err instanceof ApiError && Object.keys(err.fields).length)
+        setErrors(Object.fromEntries(Object.entries(err.fields).map(([k, v]) => [k, tr(v)])))
+      else setError(err instanceof ApiError ? tr(err.message) : t('common.error'))
     } finally {
       setLoading(false)
     }
@@ -91,16 +94,16 @@ function CreateClassForm({ onCreated, onCancel }: { onCreated: (c: SchoolClass) 
 
   return (
     <form onSubmit={onSubmit} className="mt-5 space-y-5 rounded-3xl bg-primary-soft p-5" noValidate>
-      <p className="text-muted">Создайте класс — ученики вступят в него по коду.</p>
+      <p className="text-muted">{tt('create.intro')}</p>
       <TextField
-        label="Название класса"
+        label={tt('create.name')}
         placeholder="8А"
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={errors.name}
       />
       <Tabs
-        label="Язык текстов"
+        label={tt('create.lang')}
         value={lang}
         onChange={setLang}
         options={[
@@ -110,11 +113,11 @@ function CreateClassForm({ onCreated, onCancel }: { onCreated: (c: SchoolClass) 
       />
       {error && <p className="rounded-2xl bg-pink-soft px-4 py-3 text-sm">{error}</p>}
       <Button type="submit" loading={loading}>
-        Создать класс
+        {tt('create.submit')}
       </Button>
       {onCancel && (
         <Button type="button" variant="secondary" className="bg-white" onClick={onCancel}>
-          Отмена
+          {tt('common.cancel')}
         </Button>
       )}
     </form>
