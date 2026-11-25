@@ -15,6 +15,7 @@ using SuraqQoi.Api.Features.Texts;
 using SuraqQoi.Api.Data.DevSeed;
 using SuraqQoi.Api.Services.Content;
 using SuraqQoi.Api.Services.Grading;
+using SuraqQoi.Api.Services.Grading.Eval;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,6 +101,13 @@ if (args.FirstOrDefault() == "seed-demo")
     using var scope = app.Services.CreateScope();
     Console.WriteLine(await DemoSeeder.RunAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), CancellationToken.None));
     return 0;
+}
+
+// CLI: dotnet run -- eval-grading [--lang kk] [--rules-only] [--out отчёт.md] — совпадение ИИ с учителем (ТЗ, 9.4, Q2)
+if (args.FirstOrDefault() == "eval-grading")
+{
+    Console.OutputEncoding = System.Text.Encoding.UTF8;
+    return await EvalRunner.RunAsync(args, app.Services, app.Configuration, app.Environment.ContentRootPath, CancellationToken.None);
 }
 
 // CLI: dotnet run -- pilot-report 8A-1234 [--since 2026-11-26] [--names] — цифры пилота для слайдов (ТЗ, 11)

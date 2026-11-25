@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="../SuraqQoi.Api.csproj" />
     <Content Include="heuristic-cases.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="grading-eval/dataset.json;grading-eval/labels.csv" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />
   </ItemGroup>
 
