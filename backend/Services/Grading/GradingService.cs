@@ -30,6 +30,8 @@ public sealed class OpenAiGradingService(IConfiguration config, IHostEnvironment
 {
     public static readonly TimeSpan FirstAttempt = TimeSpan.FromSeconds(4);
     public static readonly TimeSpan MinRetry = TimeSpan.FromSeconds(2);
+    /// <summary>Ответ на 3 вопроса + вывод — около 400 токенов; запас на рассуждение модели.</summary>
+    public const int MaxOutputTokens = 1500;
 
     public async Task<GradeResult?> GradeAsync(GradeInput input, TimeSpan budget, CancellationToken ct)
     {
@@ -64,7 +66,9 @@ public sealed class OpenAiGradingService(IConfiguration config, IHostEnvironment
             {
                 // Без текста вопросов и имён в логах (ТЗ, 15).
                 logger.LogWarning("Оценка ИИ: ошибка API {Status} (попытка {Attempt})", e.Status, attempt);
-                if (e.Status is 401 or 403 or 404) break; // ключ или модель — повтор не поможет
+                // Ключ, модель или лимит Groq (429: бесплатно 8000 токенов в минуту) — сразу повторять бесполезно.
+                // Сессия останется «ждёт проверки» и оценится при следующей отправке из очереди телефона.
+                if (e.Status is 401 or 403 or 404 or 429) break;
             }
         }
         return null;
@@ -76,10 +80,18 @@ public sealed class OpenAiGradingService(IConfiguration config, IHostEnvironment
         var options = new ChatCompletionOptions
         {
             Temperature = 0.2f,
+            // gpt-oss «рассуждает» перед ответом, и эти токены тоже идут в лимит Groq. Для классификации хватает коротких.
+#pragma warning disable OPENAI001 // свойство помечено в SDK как экспериментальное; Groq его поддерживает для gpt-oss
+            ReasoningEffortLevel = ChatReasoningEffortLevel.Low,
+#pragma warning restore OPENAI001
+            MaxOutputTokenCount = MaxOutputTokens,
             ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
                 jsonSchemaFormatName: "grading", jsonSchema: BinaryData.FromString(GradingPrompts.Schema), jsonSchemaIsStrict: true),
         };
         ChatCompletion response = await client.CompleteChatAsync(messages, options, ct);
+        // Без текста ученика — только расход (ТЗ, 15): по нему видно, сколько оценок влезает в лимит.
+        logger.LogInformation("Оценка ИИ: {Prompt} + {Completion} токенов (из них рассуждение {Reasoning})",
+            response.Usage?.InputTokenCount, response.Usage?.OutputTokenCount, response.Usage?.OutputTokenDetails?.ReasoningTokenCount);
         if (!string.IsNullOrEmpty(response.Refusal) || response.FinishReason == ChatFinishReason.Length) return null;
 
         try

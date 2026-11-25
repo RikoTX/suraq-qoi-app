@@ -5,7 +5,7 @@ using System.Text;
 namespace SuraqQoi.Api.Services.Grading.Eval;
 
 /// <summary>
-/// dotnet run -- eval-grading [--lang kk|ru] [--rules-only] [--budget 6.5] [--out отчёт.md]
+/// dotnet run -- eval-grading [--lang kk|ru] [--rules-only] [--budget 6.5] [--pace 20] [--out отчёт.md]
 ///   [--dataset tests/grading-eval/dataset.json] [--labels tests/grading-eval/labels.csv]
 /// Прогоняет набор через ИИ (как в приложении: по 3 вопроса к тексту за запрос, тот же бюджет) и через правила,
 /// сравнивает с уровнями учителя и печатает отчёт в markdown (ТЗ, 9.4).
@@ -28,6 +28,8 @@ public static class EvalRunner
             Console.Error.WriteLine("--budget: секунды на запрос, например 6.5");
             return 1;
         }
+        // Пауза между запросами к ИИ: бесплатный Groq — 8000 токенов в минуту, без паузы прогон упирается в лимит (429).
+        if (!double.TryParse(Arg("--pace", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out var pace) || pace < 0) pace = 0;
         if (!File.Exists(datasetPath))
         {
             Console.Error.WriteLine($"Нет набора: {datasetPath}");
@@ -62,6 +64,7 @@ public static class EvalRunner
                 {
                     var input = new GradeInput(text.Lang, text.Title, text.Body,
                         batch.Select((q, i) => new GradeQuestion(i + 1, q.Q)).ToList(), null);
+                    if (pace > 0 && (latencies.Count + failedCalls) > 0) await Task.Delay(TimeSpan.FromSeconds(pace), ct);
                     var clock = Stopwatch.StartNew();
                     var result = await grader.GradeAsync(input, budget, ct);
                     if (result is null) failedCalls++;
