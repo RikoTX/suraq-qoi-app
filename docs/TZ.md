@@ -82,7 +82,7 @@ npm run dev                   # http://localhost:5173
 ```bash
 cd backend
 dotnet run -- seed-demo       # учитель demo-teacher@suraqqoi.kz / demo-teacher-2026, класс «8А (демо)», PIN учеников 1234
-dotnet test tests             # 61 тест; интеграционным нужен Postgres из docker compose
+dotnet test tests             # 71 тест; интеграционным нужен Postgres из docker compose
 dotnet test tests --filter Category!=Integration   # только модульные, без базы
 
 cd ../frontend
@@ -120,7 +120,7 @@ npm run build && npm run preview   # проверка PWA: Service Worker раб
 | Демо-класс «8А (демо)» с историей за 14 дней | `backend/Data/DevSeed/DemoSeeder.cs` |
 | Мини-диагностика Q1: входная до первого текста, итоговая после 10 сессий или по кнопке учителя, офлайн, «было/стало» у учителя (раздел 11.1) | `backend/Features/Diagnostics/`, `frontend/src/pages/student/DiagnosticPage.tsx` |
 | Интерфейс ученика и учителя на казахском: переключатель ҚАЗ/РУС на входе и в шапке; по умолчанию — язык класса (или браузера), выбор запоминается на устройстве; сообщения сервера переводятся; казахские даты — свои названия месяцев (Intl на многих устройствах их не знает). Словарь учителя — в его чанке (6 КБ gzip), первая загрузка ученика не растёт | `frontend/src/i18n/`, `frontend/src/pages/teacher/i18n/` |
-| Тесты: 50 модульных + 11 интеграционных (настоящий API и PostgreSQL: повторная отправка сессий и диагностики) + проверка правил на фронтенде | `backend/tests/`, `npm run test:heuristic` |
+| Тесты: 59 модульных + 12 интеграционных (настоящий API и PostgreSQL: повторная отправка сессий и диагностики) + проверка правил на фронтенде | `backend/tests/`, `npm run test:heuristic` |
 | Одновременная повторная отправка (телефон не дождался ответа за 8 с и прислал пачку снова) давала 500 на вставке — теперь повтор распознаётся, ответ 200, запись одна | `SessionEndpoints.Upload`, `DiagnosticEndpoints.Submit`, `Data/DbErrors.cs` |
 | Деплой: Caddy (HTTPS, сжатие, кеш PWA) + API + PostgreSQL в Docker Compose; миграции при старте; перенос библиотеки `export-texts` / `import-texts`. Проверено локально с `DOMAIN=localhost`: вход учителя и ученика, карта навыков, gzip (JS 462 → 150 КБ), лимит входа не обходится подделкой `X-Forwarded-For` | `backend/Dockerfile`, `frontend/Dockerfile`, `backend/deploy/` |
 
@@ -640,7 +640,9 @@ db.version(1).stores({
 | Сигнал | Условие |
 |---|---|
 | `stuck` | ≥ 5 сессий за 14 дней и 0 вопросов уровня ≥ 3 |
-| `inactive` | Нет сессий 7 дней |
+
+Расчёт — `Features/Teacher/Signals.cs`, тесты — `backend/tests/SignalsTests.cs`.
+| `inactive` | Нет сессий 7 дней. Новичок без сессий — 7 дней с регистрации: первую неделю он не «пропал» |
 | `rising` | Доля уровней 3–4 за 7 дней выше, чем за предыдущие 7, на ≥ 20 п.п. |
 
 ### 11.1 Мини-диагностика (Q1) — ✅ сделано 25.11

@@ -62,7 +62,7 @@ public static class TeacherEndpoints
         var from14 = now.AddDays(-14);
         var weekAgo = now.AddDays(-7);
         var students = await db.Students.Where(s => s.ClassId == id)
-            .Select(s => new { s.Id, s.User!.Name, s.Points, s.Streak, s.LastActiveDate })
+            .Select(s => new { s.Id, s.User!.Name, s.Points, s.Streak, s.LastActiveDate, s.CreatedAt })
             .ToListAsync(ct);
         // Вопросы за 14 дней — для карты навыков, глубины и сигналов. Неоценённые не учитываем.
         var questions = await db.Questions
@@ -88,10 +88,8 @@ public static class TeacherEndpoints
             var depth7 = Depth(mine7.Select(q => q.Level!.Value)) ?? 0;
             var depthPrev = Depth(minePrev.Select(q => q.Level!.Value));
 
-            string? signal = null;
-            if (s.LastActiveDate is null || s.LastActiveDate < today.AddDays(-7)) signal = "inactive";
-            else if (sessions14 >= 5 && mine.All(q => q.Level < 3)) signal = "stuck";
-            else if (depthPrev is not null && mine7.Count > 0 && depth7 - depthPrev >= 0.2) signal = "rising";
+            var signal = Signals.Of(today, s.LastActiveDate, PointsCalculator.LocalDate(s.CreatedAt),
+                sessions14, mine.Any(q => q.Level >= 3), mine7.Count, depth7, depthPrev);
 
             return new OverviewStudentDto(s.Id, s.Name, s.Points, PointsCalculator.Rank(s.Points),
                 s.LastActiveDate >= today.AddDays(-1) ? s.Streak : 0, s.LastActiveDate,
