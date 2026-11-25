@@ -25,6 +25,11 @@ npm run dev        # http://localhost:5173, запросы /api проксиру
 | `src/auth/api.ts` | `authApi` (login / register / me), `ApiError` (сообщение + ошибки полей), типы `User`, `Role` |
 | `src/auth/AuthContext.tsx` | `AuthProvider` (хранит токен, проверяет его при запуске) |
 | `src/auth/useAuth.ts` | `useAuth()` → `user`, `token`, `loading`, `signIn`, `signOut` |
+| `src/api/` | `classes.ts` (классы, ученик), `texts.ts` (тексты учителя, библиотека, пакет), `admin.ts` (обзор). Всё через `request()` из `auth/api.ts` |
+| `src/offline/` | Dexie: `db.ts` (тексты, meta), `pack.ts` (`syncPack` — докачка по `since`) |
+| `src/pages/admin/` | `AdminHomePage`: сводка проекта, учителя, ученики, классы (только просмотр) |
+| `src/pages/student/` | Главная (код класса, список текстов), чтение текста `/texts/:id` (офлайн) |
+| `src/pages/teacher/` | Классы; класс (вкладки «Ученики» / «Тексты»); редактор текста; библиотека |
 | `src/components/` | `Logo`, `AuthLayout`, `TextField`, `Button` (`primary` / `secondary`, `loading`), `RoleSwitch` |
 | `src/pages/` | `LoginPage`, `RegisterPage`, `HomePage` (заглушка «Вы вошли как …») |
 | `src/index.css` | Tailwind + тема (токены цветов и шрифт) |
@@ -47,7 +52,7 @@ npm run dev        # http://localhost:5173, запросы /api проксиру
 - Все запросы к API — через функции в `src/auth/api.ts` (позже — общий `src/api/`), с таймаутом. В компонентах `fetch` напрямую не вызывать.
 - Ошибки: `ApiError.fields` показывать под полями (`TextField error=...`), `ApiError.message` — общей плашкой.
 - Тексты интерфейса — на русском (казахский через i18n позже).
-- Никаких ключей API во фронтенде. Claude вызывается только с бэка.
+- Никаких ключей API во фронтенде. ИИ (OpenAI) вызывается только с бэка.
 - Делать только текущий этап из ТЗ.
 
 ## Проверка перед коммитом

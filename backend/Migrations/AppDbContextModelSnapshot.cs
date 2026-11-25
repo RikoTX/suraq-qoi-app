@@ -86,6 +86,14 @@ namespace SuraqQoi.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("body");
 
+                    b.Property<Guid?>("ClassId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("class_id");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
                     b.Property<short>("Difficulty")
                         .HasColumnType("smallint")
                         .HasColumnName("difficulty");
@@ -130,6 +138,12 @@ namespace SuraqQoi.Api.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_texts");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_texts_created_by_id");
+
+                    b.HasIndex("ClassId", "Reviewed", "UpdatedAt")
+                        .HasDatabaseName("ix_texts_class_id_reviewed_updated_at");
 
                     b.HasIndex("Lang", "Reviewed", "UpdatedAt")
                         .HasDatabaseName("ix_texts_lang_reviewed_updated_at");
@@ -331,6 +345,23 @@ namespace SuraqQoi.Api.Migrations
                         .HasConstraintName("fk_questions_sessions_session_id");
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("SuraqQoi.Api.Data.ReadingText", b =>
+                {
+                    b.HasOne("SuraqQoi.Api.Data.SchoolClass", "Class")
+                        .WithMany()
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_texts_classes_class_id");
+
+                    b.HasOne("SuraqQoi.Api.Data.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_texts_users_created_by_id");
+
+                    b.Navigation("Class");
                 });
 
             modelBuilder.Entity("SuraqQoi.Api.Data.SchoolClass", b =>

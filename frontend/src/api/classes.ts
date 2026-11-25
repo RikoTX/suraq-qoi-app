@@ -42,6 +42,9 @@ export const classesApi = {
   create: (token: string, data: { name: string; lang: Lang }) => request<SchoolClass>('/classes', post(data), token),
   students: (token: string, id: string) =>
     request<{ class: SchoolClass; students: ClassStudent[] }>(`/classes/${id}/students`, {}, token),
+  /** Убрать ученика из класса. Аккаунт остаётся — он сможет вступить по коду в нужный класс. */
+  removeStudent: (token: string, classId: string, studentId: string) =>
+    request<void>(`/classes/${classId}/students/${studentId}`, { method: 'DELETE' }, token),
 }
 
 /** Ученик: профиль и вступление в класс. */

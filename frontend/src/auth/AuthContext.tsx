@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError, authApi, type AuthResponse } from './api'
+import { clearLocalData } from '../offline/db'
 import { AuthContext, type AuthState } from './useAuth'
 
 const STORAGE_KEY = 'suraq-qoi.auth'
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
+    void clearLocalData()
     setAuth(null)
   }, [])
 

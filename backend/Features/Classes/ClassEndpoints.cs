@@ -26,6 +26,7 @@ public static class ClassEndpoints
         teacher.MapGet("/", List);
         teacher.MapPost("/", Create);
         teacher.MapGet("/{id:guid}/students", Students);
+        teacher.MapDelete("/{id:guid}/students/{studentId:guid}", RemoveStudent);
 
         var student = app.MapGroup("/api/student").WithTags("Student")
             .RequireAuthorization(p => p.RequireRole("student"));
@@ -91,6 +92,23 @@ public static class ClassEndpoints
             @class = new ClassDto(cls.Id, cls.Name, cls.JoinCode, cls.Lang, students.Count, cls.CreatedAt),
             students,
         });
+    }
+
+    /// <summary>
+    /// Убрать ученика из класса (зашёл не тот). Аккаунт и прогресс остаются: ученик увидит ввод кода
+    /// и сможет вступить в нужный класс.
+    /// </summary>
+    private static async Task<IResult> RemoveStudent(Guid id, Guid studentId, ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)
+    {
+        var teacherId = UserId(principal);
+        var student = await db.Students.SingleOrDefaultAsync(
+            s => s.Id == studentId && s.ClassId == id && s.Class!.TeacherId == teacherId, ct);
+        if (student is null)
+            return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Ученик не найден в этом классе");
+
+        student.ClassId = null;
+        await db.SaveChangesAsync(ct);
+        return TypedResults.NoContent();
     }
 
     private static async Task<IResult> StudentMe(ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)

@@ -5,8 +5,12 @@ import { useAuth } from '../../auth/useAuth'
 import { AppLayout } from '../../components/AppLayout'
 import { Button } from '../../components/Button'
 import { TextField } from '../../components/TextField'
+import { clearTexts, getMeta, setMeta } from '../../offline/db'
+import { TextList } from './TextList'
 
-/** Главная ученика. Без класса — ввод кода; с классом — карточка класса (сессии — этап 4). */
+const ME_KEY = 'studentMe'
+
+/** Главная ученика. Без класса — ввод кода; с классом — карточка класса и тексты. */
 export function StudentHomePage() {
   const { user, token } = useAuth()
   const [me, setMe] = useState<StudentMe | null>(null)
@@ -16,8 +20,18 @@ export function StudentHomePage() {
     if (!token) return
     studentApi
       .me(token)
-      .then(setMe)
-      .catch((e) => setError(e instanceof ApiError ? e.message : 'Не удалось загрузить профиль'))
+      .then((m) => {
+        setMe(m)
+        void setMeta(ME_KEY, JSON.stringify(m))
+        // Учитель убрал из класса — тексты прежнего класса с телефона стираем.
+        if (!m.class) void clearTexts()
+      })
+      .catch(async (e) => {
+        // Нет связи — берём профиль с прошлого входа, чтобы тексты открывались офлайн.
+        const cached = await getMeta(ME_KEY)
+        if (cached && e instanceof ApiError && e.offline) setMe(JSON.parse(cached) as StudentMe)
+        else setError(e instanceof ApiError ? e.message : 'Не удалось загрузить профиль')
+      })
   }, [token])
 
   return (
@@ -43,13 +57,16 @@ export function StudentHomePage() {
     >
       {error && <p className="rounded-2xl bg-pink-soft px-4 py-3 text-sm">{error}</p>}
       {!me && !error && <p className="text-muted">Загрузка…</p>}
-      {me && !me.class && <JoinClassForm onJoined={(c) => setMe({ ...me, class: c })} />}
-      {me?.class && (
-        <div className="rounded-3xl bg-primary-soft p-5">
-          <p className="text-xl font-semibold text-primary">{me.points} очков</p>
-          <p className="mt-1 text-muted">Тексты и вопросы появятся здесь совсем скоро.</p>
-        </div>
+      {me && !me.class && (
+        <JoinClassForm
+          onJoined={(c) => {
+            const next = { ...me, class: c }
+            setMe(next)
+            void setMeta(ME_KEY, JSON.stringify(next))
+          }}
+        />
       )}
+      {me?.class && <TextList lang={me.class.lang} />}
     </AppLayout>
   )
 }

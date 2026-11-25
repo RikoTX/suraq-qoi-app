@@ -41,6 +41,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.Property(x => x.ExampleQuestions).HasColumnType("jsonb");
             e.Property(x => x.Hints).HasColumnType("jsonb");
             e.HasIndex(x => new { x.Lang, x.Reviewed, x.UpdatedAt });
+            e.HasIndex(x => new { x.ClassId, x.Reviewed, x.UpdatedAt });
+            e.HasOne(x => x.Class).WithMany().HasForeignKey(x => x.ClassId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedById).OnDelete(DeleteBehavior.SetNull);
         });
 
         b.Entity<Session>(e =>

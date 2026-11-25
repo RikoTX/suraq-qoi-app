@@ -52,9 +52,15 @@ public sealed class Student
     public List<Session> Sessions { get; set; } = [];
 }
 
+/// <summary>
+/// Текст для чтения. ClassId = null — общая библиотека (шаблоны, сгенерированные командой generate-texts);
+/// иначе — текст класса, за который отвечает учитель. Reviewed = опубликован для учеников класса.
+/// </summary>
 public sealed class ReadingText
 {
     public Guid Id { get; set; }
+    public Guid? ClassId { get; set; }
+    public Guid? CreatedById { get; set; }
     public required string Lang { get; set; }
     public required string Topic { get; set; }
     public required string Kind { get; set; }
@@ -65,6 +71,8 @@ public sealed class ReadingText
     public required string Hints { get; set; }            // jsonb
     public bool Reviewed { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    public SchoolClass? Class { get; set; }
 }
 
 public sealed class Session

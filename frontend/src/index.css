@@ -28,3 +28,40 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Текст для чтения (компонент Markdown) */
+.reading {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+.reading > * + * {
+  margin-top: 0.85em;
+}
+.reading ul {
+  list-style: disc;
+  padding-left: 1.25em;
+}
+.reading ol {
+  list-style: decimal;
+  padding-left: 1.25em;
+}
+.reading strong {
+  font-weight: 600;
+}
+.reading table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  display: block;
+  overflow-x: auto;
+}
+.reading th,
+.reading td {
+  border: 1px solid var(--color-line);
+  padding: 0.4em 0.6em;
+  text-align: left;
+}
+.reading th {
+  background: var(--color-primary-soft);
+  font-weight: 500;
+}

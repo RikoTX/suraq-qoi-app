@@ -1,6 +1,7 @@
 import type { Role } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '../components/Button'
+import { AdminHomePage } from './admin/AdminHomePage'
 import { StudentHomePage } from './student/StudentHomePage'
 import { TeacherHomePage } from './teacher/TeacherHomePage'
 
@@ -10,12 +11,13 @@ const ROLE_LABEL: Record<Role, string> = {
   admin: 'Администратор',
 }
 
-/** Главная по роли. У админа пока заглушка. */
+/** Главная по роли. Заглушка ниже — на случай неизвестной роли. */
 export function HomePage() {
   const { user, signOut } = useAuth()
   if (!user) return null
   if (user.role === 'teacher') return <TeacherHomePage />
   if (user.role === 'student') return <StudentHomePage />
+  if (user.role === 'admin') return <AdminHomePage />
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">

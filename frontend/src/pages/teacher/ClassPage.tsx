@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 import { classesApi, LANG_LABEL, type ClassStudent, type SchoolClass } from '../../api/classes'
 import { ApiError } from '../../auth/api'
 import { useAuth } from '../../auth/useAuth'
 import { AppLayout } from '../../components/AppLayout'
 import { ListCard } from '../../components/ListCard'
+import { Tabs } from '../../components/Tabs'
+import { ClassTexts } from './ClassTexts'
 import { pluralStudents } from './plural'
 
-/** Класс учителя: код для учеников и список учеников. */
+/** Класс учителя: код для учеников, ученики и тексты класса. */
 export function ClassPage() {
   const { id } = useParams()
   const { token } = useAuth()
   const [data, setData] = useState<{ class: SchoolClass; students: ClassStudent[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'texts' ? 'texts' : 'students'
 
   useEffect(() => {
     if (!token || !id) return
@@ -24,6 +28,20 @@ export function ClassPage() {
   }, [token, id])
 
   const cls = data?.class
+
+  async function removeStudent(s: ClassStudent) {
+    if (!token || !id || !data) return
+    if (!confirm(`Убрать «${s.name}» из класса ${data.class.name}?
+
+Аккаунт ученика останется: он сможет снова вступить по коду, если это ошибка.`)) return
+    setError(null)
+    try {
+      await classesApi.removeStudent(token, id, s.id)
+      setData({ ...data, students: data.students.filter((x) => x.id !== s.id) })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Не удалось убрать ученика')
+    }
+  }
 
   async function copy() {
     if (!cls) return
@@ -59,6 +77,20 @@ export function ClassPage() {
       {!data && !error && <p className="text-muted">Загрузка…</p>}
 
       {data && (
+        <Tabs
+          label="Раздел"
+          value={tab}
+          onChange={(t) => setParams(t === 'texts' ? { tab: 'texts' } : {}, { replace: true })}
+          options={[
+            { value: 'students', label: `Ученики · ${data.students.length}` },
+            { value: 'texts', label: 'Тексты' },
+          ]}
+        />
+      )}
+      <div className="mt-6" />
+      {data && tab === 'texts' && id && <ClassTexts classId={id} />}
+
+      {data && tab === 'students' && (
         <>
           <h2 className="text-xl font-semibold">
             {data.students.length} {pluralStudents(data.students.length)}
@@ -76,7 +108,19 @@ export function ClassPage() {
                 icon={s.name.slice(0, 1).toUpperCase()}
                 title={s.name}
                 subtitle={s.email}
-                trailing={<span className="text-sm font-medium text-primary">{s.points} очк.</span>}
+                trailing={
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="text-sm font-medium text-primary">{s.points} очк.</span>
+                    <button
+                      type="button"
+                      onClick={() => removeStudent(s)}
+                      className="rounded-xl px-2 py-1 text-xs font-medium text-danger hover:bg-pink-soft"
+                      aria-label={`Убрать ${s.name} из класса`}
+                    >
+                      Убрать
+                    </button>
+                  </span>
+                }
               />
             ))}
           </div>

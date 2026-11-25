@@ -3,7 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SuraqQoi.Api.Auth;
 using SuraqQoi.Api.Data;
+using SuraqQoi.Api.Features.Admin;
 using SuraqQoi.Api.Features.Classes;
+using SuraqQoi.Api.Features.Texts;
+using SuraqQoi.Api.Data.DevSeed;
+using SuraqQoi.Api.Services.Content;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +41,25 @@ builder.Services.AddProblemDetails();
 // Некорректный JSON в запросе → 400, а не 500 (в Development по умолчанию бросается исключение).
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = false);
 
+builder.Services.AddScoped<TextGenerator>();
+
 var app = builder.Build();
+
+// CLI: dotnet run -- generate-texts --lang kk --topic local --kind schedule --difficulty 2 --count 5
+if (args.FirstOrDefault() == "generate-texts")
+{
+    Console.OutputEncoding = System.Text.Encoding.UTF8;
+    var options = TextGenerator.ParseArgs(args, out var error);
+    if (options is null)
+    {
+        Console.Error.WriteLine($"Ошибка в аргументах: {error}");
+        return 1;
+    }
+    using var scope = app.Services.CreateScope();
+    var saved = await scope.ServiceProvider.GetRequiredService<TextGenerator>().RunAsync(options, CancellationToken.None);
+    Console.WriteLine($"Готово: сохранено {saved} из {options.Count}. Тексты в общей библиотеке — учителя добавляют их в свои классы.");
+    return saved > 0 ? 0 : 1;
+}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -51,7 +73,11 @@ app.MapGet("/health", async (AppDbContext db, CancellationToken ct) =>
 
 app.MapAuth();
 app.MapClasses();
+app.MapTexts();
+app.MapAdmin();
 
 await AdminSeeder.SeedAsync(app.Services, app.Configuration, app.Logger);
+await DevTextSeeder.SeedAsync(app.Services, app.Environment, app.Logger);
 
 app.Run();
+return 0;

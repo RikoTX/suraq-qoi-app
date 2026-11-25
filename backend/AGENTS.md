@@ -27,7 +27,24 @@ dotnet run                    # http://localhost:8080
 | `Data/Entities.cs` | Все сущности: `User` (+ `UserRole`), `SchoolClass`, `Student`, `ReadingText`, `Session`, `Question` |
 | `Data/AppDbContext.cs` | Таблицы, индексы, связи |
 | `Migrations/` | Миграции EF Core |
-| `Features/<Фича>/` | Новые эндпоинты — по папке на фичу (этап 2: `Features/Classes/`) |
+| `Features/Classes/` | Этап 2: классы учителя, вступление по коду, `GET /api/student/me` |
+| `Features/Texts/` | Этап 3: тексты класса учителя (создать, ИИ, из библиотеки, править, опубликовать), `/api/library`, `GET /api/student/pack` |
+| `Features/Admin/` | Обзор для админа: `/api/admin/stats`, `/users`, `/classes` (только чтение) |
+| `Services/Content/TextGenerator.cs` | Генерация текстов через Groq/OpenAI (команда `generate-texts`) |
+| `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста |
+| `Features/<Фича>/` | Новые эндпоинты — по папке на фичу |
+
+## Генерация текстов
+
+Ключ Groq (`gsk_…`, console.groq.com) хранится в user-secrets (вне репозитория):
+
+```bash
+dotnet user-secrets set "OpenAI:ApiKey" "<ключ>"     # или переменная OPENAI_API_KEY
+dotnet run -- generate-texts --lang kk --topic local --kind schedule --difficulty 2 --count 5
+```
+
+Темы: `sport games money nature history tech local`. Типы: `article table notice schedule social_post math_problem`.
+Команда пополняет **общую библиотеку** (`class_id = null`). Учитель добавляет оттуда тексты в класс черновиками или генерирует свои кнопкой «ИИ»; публикует сам. Админ тексты не проверяет.
 
 ## Роли и авторизация
 
@@ -42,8 +59,8 @@ dotnet run                    # http://localhost:8080
 - Ответы ошибок: `TypedResults.ValidationProblem(...)` для полей, `TypedResults.Problem(...)` для остального. Тексты ошибок — на русском, понятные пользователю.
 - Email всегда приводить к нижнему регистру.
 - Изменил сущности → `dotnet ef migrations add <ИмяНаАнглийском>` → `dotnet ef database update`. Применённые миграции не редактировать.
-- Секреты (`Jwt:Secret`, `ANTHROPIC_API_KEY`, пароли) — только в `appsettings.Development.json` для локалки или в переменных окружения на сервере. Не коммитить реальные ключи.
-- Claude API — только с сервера, только модели `claude-opus-5-5` (генерация текстов) и `claude-haiku-5-5` (оценка), с таймаутами (раздел 9 ТЗ).
+- Секреты (`Jwt:Secret`, `OpenAI:ApiKey`, пароли) — локально в user-secrets (`dotnet user-secrets set`), на сервере в переменных окружения. Не коммитить реальные ключи.
+- ИИ — только с сервера, через пакет `OpenAI` (OpenAI-совместимый API; сервер — `OpenAI:Endpoint`, сейчас Groq). Модели из настроек: `OpenAI:TextModel` (тексты), `OpenAI:GradingModel` (оценка). Всегда с таймаутами (раздел 9 ТЗ).
 - Не логировать тексты вопросов и имена учеников.
 - Делать только текущий этап. Не добавлять функции будущих этапов «заодно».
 

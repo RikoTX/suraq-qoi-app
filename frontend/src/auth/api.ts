@@ -22,9 +22,14 @@ export class ApiError extends Error {
     this.status = status
     this.fields = fields
   }
+
+  /** Сервер недоступен: нет сети, таймаут или прокси не достучался до API (502–504). */
+  get offline() {
+    return this.status === 0 || (this.status >= 502 && this.status <= 504)
+  }
 }
 
-export async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
+export async function request<T>(path: string, init: RequestInit = {}, token?: string, timeoutMs = 15_000): Promise<T> {
   let res: Response
   try {
     res = await fetch(`/api${path}`, {
@@ -33,12 +38,13 @@ export async function request<T>(path: string, init: RequestInit = {}, token?: s
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
   } catch {
     throw new ApiError(0, 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.')
   }
 
+  if (res.status === 204) return undefined as T
   if (res.ok) return (await res.json()) as T
 
   const body = await res.json().catch(() => null)
