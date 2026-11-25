@@ -19,12 +19,12 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public FakeGrader Grader { get; } = new();
 
-    private static string Server => Environment.GetEnvironmentVariable("TEST_POSTGRES") ?? DefaultServer;
+    private static string PostgresServer => Environment.GetEnvironmentVariable("TEST_POSTGRES") ?? DefaultServer;
 
     public ApiFactory()
     {
         // Program читает строку подключения сразу при создании builder — до ConfigureWebHost, поэтому переменная окружения.
-        Environment.SetEnvironmentVariable("ConnectionStrings__Default", $"{Server};Database={_database}");
+        Environment.SetEnvironmentVariable("ConnectionStrings__Default", $"{PostgresServer};Database={_database}");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -38,7 +38,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await using var conn = new NpgsqlConnection($"{Server};Database=postgres;Timeout=3");
+        await using var conn = new NpgsqlConnection($"{PostgresServer};Database=postgres;Timeout=3");
         try
         {
             await conn.OpenAsync();
@@ -46,7 +46,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         catch (Exception e)
         {
             throw new InvalidOperationException(
-                $"Интеграционным тестам нужен PostgreSQL ({Server}): cd backend && docker compose up -d. " +
+                $"Интеграционным тестам нужен PostgreSQL ({PostgresServer}): cd backend && docker compose up -d. " +
                 "Только модульные тесты: dotnet test tests --filter Category!=Integration", e);
         }
         // Сама база создаётся миграциями при старте API (первый CreateClient).
@@ -56,7 +56,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         await base.DisposeAsync();
         NpgsqlConnection.ClearAllPools();
-        await using var conn = new NpgsqlConnection($"{Server};Database=postgres");
+        await using var conn = new NpgsqlConnection($"{PostgresServer};Database=postgres");
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_database}\" WITH (FORCE)", conn);
         await cmd.ExecuteNonQueryAsync();
