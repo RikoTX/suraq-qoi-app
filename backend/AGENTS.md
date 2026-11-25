@@ -12,7 +12,7 @@ ASP.NET Core **.NET 9** (Minimal APIs) · EF Core 9 + Npgsql · PostgreSQL 17 ·
 
 ```bash
 docker compose up -d          # PostgreSQL: localhost:5433 (не 5432 — там может быть системный Postgres)
-dotnet ef database update     # миграции
+dotnet ef database update     # миграции (на сервере применяются сами при старте)
 dotnet run                    # http://localhost:8080
 ```
 
@@ -37,6 +37,8 @@ dotnet run                    # http://localhost:8080
 | `tests/` | xUnit (`dotnet test tests`); `heuristic-cases.json` — общие примеры с фронтендом |
 | `Services/Content/TextGenerator.cs` | Генерация текстов через Groq/OpenAI (команда `generate-texts`) |
 | `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста. `DemoSeeder` — `dotnet run -- seed-demo`: учитель `demo-teacher@suraqqoi.kz` / `demo-teacher-2026`, класс «8А (демо)», 15 учеников с PIN `1234`, история за 14 дней |
+| `Data/LibraryTransfer.cs` | `export-texts` / `import-texts file.json` — перенос общей библиотеки между базами (без дублей) |
+| `Dockerfile`, `deploy/` | Сервер: Caddy + API + PostgreSQL (`deploy/docker-compose.yml`, `deploy/Caddyfile`, `.env.example`), инструкция — `deploy/README.md` |
 | `Features/<Фича>/` | Новые эндпоинты — по папке на фичу |
 
 ## Генерация текстов

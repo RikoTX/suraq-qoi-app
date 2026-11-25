@@ -1,0 +1,11 @@
+bin/
+obj/
+tests/
+deploy/
+docker-compose.yml
+Dockerfile
+.dockerignore
+*.md
+# Локальный админ и пароль базы — только для разработки
+appsettings.Development.json
+Properties/launchSettings.json
