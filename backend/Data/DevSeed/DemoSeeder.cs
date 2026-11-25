@@ -97,8 +97,8 @@ public static class DemoSeeder
             db.Students.Add(student);
 
             // Профиль ученика: стартовый уровень и рост за две недели. 3 и 9 — «застряли», 12 — «пропал».
-            var start = 0.6 + rnd.NextDouble() * 1.2;
-            var growth = i is 3 or 9 ? 0 : 0.6 + rnd.NextDouble() * 1.4;
+            var start = 0.9 + rnd.NextDouble() * 0.9;
+            var growth = i is 3 or 9 ? 0 : 1.2 + rnd.NextDouble() * 1.3;
             var lastDay = i == 12 ? Days - 9 : Days;
             var sessions = new List<Session>();
             for (var day = 0; day < lastDay; day++)

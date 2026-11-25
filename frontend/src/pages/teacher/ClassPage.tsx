@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/useAuth'
 import { AppLayout } from '../../components/AppLayout'
 import { ListCard } from '../../components/ListCard'
 import { Tabs } from '../../components/Tabs'
+import { ClassOverview } from './ClassOverview'
 import { ClassTexts } from './ClassTexts'
 import { pluralStudents } from './plural'
 
@@ -17,7 +18,8 @@ export function ClassPage() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'texts' ? 'texts' : 'students'
+  const tabParam = params.get('tab')
+  const tab = tabParam === 'texts' || tabParam === 'skills' ? tabParam : 'students'
 
   useEffect(() => {
     if (!token || !id) return
@@ -92,15 +94,17 @@ export function ClassPage() {
         <Tabs
           label="Раздел"
           value={tab}
-          onChange={(t) => setParams(t === 'texts' ? { tab: 'texts' } : {}, { replace: true })}
+          onChange={(t) => setParams(t === 'students' ? {} : { tab: t }, { replace: true })}
           options={[
             { value: 'students', label: `Ученики · ${data.students.length}` },
+            { value: 'skills', label: 'Навыки' },
             { value: 'texts', label: 'Тексты' },
           ]}
         />
       )}
       <div className="mt-6" />
       {data && tab === 'texts' && id && <ClassTexts classId={id} />}
+      {data && tab === 'skills' && id && <ClassOverview classId={id} />}
 
       {data && tab === 'students' && (
         <>

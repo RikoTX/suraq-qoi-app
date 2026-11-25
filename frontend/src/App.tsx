@@ -13,6 +13,9 @@ import { startOutboxSync } from './offline/outbox'
 // Страницы учителя — отдельным чанком (ТЗ, 5.1): в первую загрузку ученика не входят.
 const ClassPage = lazy(() => import('./pages/teacher/ClassPage').then((m) => ({ default: m.ClassPage })))
 const LibraryPage = lazy(() => import('./pages/teacher/LibraryPage').then((m) => ({ default: m.LibraryPage })))
+const StudentProfilePage = lazy(() =>
+  import('./pages/teacher/StudentProfilePage').then((m) => ({ default: m.StudentProfilePage })),
+)
 const TeacherTextPage = lazy(() => import('./pages/teacher/TeacherTextPage').then((m) => ({ default: m.TeacherTextPage })))
 
 /** Только для вошедших. Остальных отправляем на вход. */
@@ -42,6 +45,7 @@ export default function App() {
             <Route path="/texts/:id" element={<RequireAuth><TextReadPage /></RequireAuth>} />
             <Route path="/texts/:id/ask" element={<RequireAuth><SessionPage /></RequireAuth>} />
             <Route path="/results/:id" element={<RequireAuth><ResultPage /></RequireAuth>} />
+            <Route path="/teacher/students/:id" element={<RequireAuth><StudentProfilePage /></RequireAuth>} />
             <Route path="/teacher/texts/:id" element={<RequireAuth><TeacherTextPage /></RequireAuth>} />
             <Route path="/teacher/classes/:classId/texts/new" element={<RequireAuth><TeacherTextPage /></RequireAuth>} />
             <Route path="/teacher/classes/:classId/library" element={<RequireAuth><LibraryPage /></RequireAuth>} />
