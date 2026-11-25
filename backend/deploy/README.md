@@ -42,9 +42,8 @@ curl https://$DOMAIN/health          # {"status":"ok"}
 ```bash
 C="docker compose -f backend/deploy/docker-compose.yml"
 
-# Библиотека текстов: выгрузить с машины, где она есть (локально: cd backend && dotnet run -- export-texts library.json),
-# и загрузить на сервер. Повторная загрузка не создаёт дублей.
-$C run --rm -v "$PWD/library.json:/tmp/library.json:ro" api import-texts /tmp/library.json
+# Библиотека текстов (26 текстов kk/ru из репозитория). Повторная загрузка не создаёт дублей.
+$C run --rm -v "$PWD/backend/Data/Library/library.json:/tmp/library.json:ro" api import-texts /tmp/library.json
 
 # Или сгенерировать на сервере (нужен ключ):
 $C run --rm api generate-texts --lang kk --topic local --kind schedule --difficulty 2 --count 5

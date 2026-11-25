@@ -9,7 +9,7 @@ namespace SuraqQoi.Api.Data;
 /// <summary>
 /// Перенос общей библиотеки текстов (class_id = null) между базами — например, с машины разработки на сервер.
 /// dotnet run -- export-texts library.json · dotnet run -- import-texts library.json
-/// Формат — как у Data/DevSeed/sample-texts.json. Тексты с тем же языком и заголовком не дублируются.
+/// Формат — как у Data/Library/library.json. Тексты с тем же языком и заголовком не дублируются.
 /// </summary>
 public static class LibraryTransfer
 {
