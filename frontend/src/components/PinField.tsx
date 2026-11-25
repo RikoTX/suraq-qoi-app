@@ -8,7 +8,7 @@ type Props = {
   autoFocus?: boolean
 }
 
-/** PIN ученика: 4 цифры, цифровая клавиатура на телефоне. */
+/** PIN ученика: 4 цифры, цифровая клавиатура на телефоне. «PIN» одинаково на ru и kk. */
 export function PinField({ label = 'PIN', value, onChange, error, autoFocus }: Props) {
   return (
     <TextField

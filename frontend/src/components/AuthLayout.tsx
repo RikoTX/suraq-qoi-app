@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { LangSwitch } from '../i18n/LangSwitch'
+import { useI18n } from '../i18n/useI18n'
 import { Logo } from './Logo'
 
 type Props = {
@@ -9,6 +11,7 @@ type Props = {
 
 /** Фиолетовая шапка с логотипом и белый лист снизу — как в Queezy. */
 export function AuthLayout({ title, subtitle, children }: Props) {
+  const { t } = useI18n()
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
       <header className="relative overflow-hidden px-6 pt-12 pb-10 text-white">
@@ -18,10 +21,11 @@ export function AuthLayout({ title, subtitle, children }: Props) {
 
         <div className="relative flex items-center gap-3">
           <Logo size={48} />
-          <div>
+          <div className="flex-1">
             <p className="text-lg font-semibold leading-tight">Сұрақ қой</p>
-            <p className="text-sm text-white/70">Обыграй ИИ</p>
+            <p className="text-sm text-white/70">{t('app.tagline')}</p>
           </div>
+          <LangSwitch />
         </div>
 
         <h1 className="relative mt-8 text-2xl font-semibold">{title}</h1>

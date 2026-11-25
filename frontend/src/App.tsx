@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/useAuth'
+import { I18nProvider } from './i18n/I18nProvider'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
@@ -37,6 +38,7 @@ export default function App() {
   // Очередь отправки работает для всех учеников на устройстве, на любом экране (ТЗ, 8).
   useEffect(() => startOutboxSync(), [])
   return (
+    <I18nProvider>
     <AuthProvider>
       <BrowserRouter>
         <Suspense fallback={null}>
@@ -58,5 +60,6 @@ export default function App() {
         </Suspense>
       </BrowserRouter>
     </AuthProvider>
+    </I18nProvider>
   )
 }

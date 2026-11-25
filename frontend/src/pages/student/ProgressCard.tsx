@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router'
 import type { StudentProgress } from '../../api/sessions'
+import { useI18n } from '../../i18n/useI18n'
 import { db, getMeta } from '../../offline/db'
 import { isPending, nextRank, rankOf, sessionPoints } from '../../scoring/points'
 
@@ -15,6 +16,7 @@ type Props = {
  * сессии, которые ещё не проверил ИИ, показываются отдельно и в ранг не входят (ТЗ, 10).
  */
 export function ProgressCard({ userId, fallback }: Props) {
+  const { t } = useI18n()
   const data = useLiveQuery(async () => {
     const raw = await getMeta(`progress:${userId}`)
     const sessions = (await db.sessions.where('userId').equals(userId).toArray()).sort((a, b) =>
@@ -42,35 +44,35 @@ export function ProgressCard({ userId, fallback }: Props) {
       <div className="rounded-3xl bg-primary-soft p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-muted">Мой ранг</p>
+            <p className="text-sm text-muted">{t('progress.myRank')}</p>
             <p className="mt-1 text-xl font-semibold text-primary">
-              {rank.emoji} {rank.label}
+              {rank.emoji} {t(`rank.${rank.code}` as const)}
             </p>
           </div>
           <div className="text-right">
             <p className="text-3xl font-semibold">{points}</p>
-            <p className="text-sm text-muted">очков</p>
+            <p className="text-sm text-muted">{t('progress.points')}</p>
           </div>
         </div>
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-white" role="progressbar" aria-valuenow={share} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
         </div>
         <p className="mt-2 text-sm text-muted">
-          {next ? `Ещё ${next.from - points} до ранга «${next.label}»` : 'Высший ранг — ты мастер вопросов!'}
+          {next ? t('progress.toNext', { n: next.from - points, rank: t(`rank.${next.code}` as const) }) : t('progress.top')}
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-sm">
           {(progress?.streak ?? 0) > 0 && (
-            <span className="rounded-full bg-white px-3 py-1">🔥 {progress?.streak} дн. подряд</span>
+            <span className="rounded-full bg-white px-3 py-1">{t('progress.streak', { n: progress?.streak ?? 0 })}</span>
           )}
           {pendingPoints > 0 && (
-            <span className="rounded-full bg-white px-3 py-1 text-muted">+{pendingPoints} ждут проверки ИИ</span>
+            <span className="rounded-full bg-white px-3 py-1 text-muted">{t('progress.pending', { n: pendingPoints })}</span>
           )}
         </div>
       </div>
 
       {recent.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold">Мои вопросы</h2>
+          <h2 className="text-xl font-semibold">{t('progress.myQuestions')}</h2>
           <ul className="mt-3 space-y-2">
             {recent.map(({ session, points: p, pending }) => (
               <li key={session.id}>
@@ -81,7 +83,7 @@ export function ProgressCard({ userId, fallback }: Props) {
                   <span className="min-w-0 truncate">{session.textTitle}</span>
                   <span className={`shrink-0 text-sm font-medium ${pending ? 'text-muted' : 'text-primary'}`}>
                     +{p}
-                    {pending && ' · ждёт'}
+                    {pending && t('progress.waiting')}
                   </span>
                 </Link>
               </li>

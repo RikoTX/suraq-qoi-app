@@ -1,10 +1,12 @@
 import type { Role } from '../auth/api'
+import { useI18n } from '../i18n/useI18n'
+import type { Key } from '../i18n/ru'
 
 type SelfRole = Exclude<Role, 'admin'>
 
-const OPTIONS: { value: SelfRole; label: string; emoji: string }[] = [
-  { value: 'student', label: 'Я ученик', emoji: '🎒' },
-  { value: 'teacher', label: 'Я учитель', emoji: '📚' },
+const OPTIONS: { value: SelfRole; label: Key; emoji: string }[] = [
+  { value: 'student', label: 'login.student', emoji: '🎒' },
+  { value: 'teacher', label: 'login.teacher', emoji: '📚' },
 ]
 
 type Props = {
@@ -14,8 +16,9 @@ type Props = {
 
 /** Выбор «ученик / учитель» на экране входа. Роль «админ» через форму не выдаётся. */
 export function RoleSwitch({ value, onChange }: Props) {
+  const { t } = useI18n()
   return (
-    <div role="radiogroup" aria-label="Роль" className="grid grid-cols-2 gap-3">
+    <div role="radiogroup" aria-label={t('login.role')} className="grid grid-cols-2 gap-3">
       {OPTIONS.map((o) => {
         const active = o.value === value
         return (
@@ -32,7 +35,7 @@ export function RoleSwitch({ value, onChange }: Props) {
             <span className="block text-2xl" aria-hidden>
               {o.emoji}
             </span>
-            <span className={`mt-2 block font-medium ${active ? 'text-primary' : ''}`}>{o.label}</span>
+            <span className={`mt-2 block font-medium ${active ? 'text-primary' : ''}`}>{t(o.label)}</span>
           </button>
         )
       })}

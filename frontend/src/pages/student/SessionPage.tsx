@@ -6,6 +6,7 @@ import { AppLayout } from '../../components/AppLayout'
 import { Button } from '../../components/Button'
 import { Markdown } from '../../components/Markdown'
 import { TextArea } from '../../components/TextArea'
+import { useI18n } from '../../i18n/useI18n'
 import { db, type LocalQuestion, type LocalSession } from '../../offline/db'
 import { flushOutbox, saveSession } from '../../offline/outbox'
 import { localConclusionScore, localLevel } from '../../scoring/heuristic'
@@ -14,12 +15,13 @@ const QUESTIONS = 3
 const MAX_QUESTION = 500
 const MAX_CONCLUSION = 1000
 
+// «Лестница» уровней 1–4: название и примеры — в словаре (level.N, session.ex.N).
 const LADDER = [
-  { label: 'Найти', points: 10, example: 'Когда? Где? Сколько?' },
-  { label: 'Связать', points: 20, example: 'Почему? Чем отличается?' },
-  { label: 'Вывести', points: 30, example: 'Что будет, если…? Успеет ли…?' },
-  { label: 'Оценить', points: 50, example: 'Можно ли доверять…? Убедительно ли…?' },
-]
+  { level: 1, points: 10 },
+  { level: 2, points: 20 },
+  { level: 3, points: 30 },
+  { level: 4, points: 50 },
+] as const
 
 /**
  * Сессия «Обыграй ИИ» (ТЗ, S3): 3 вопроса к тексту → вывод → итог.
@@ -39,12 +41,13 @@ export function SessionPage() {
   const [hint, setHint] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const { t } = useI18n()
 
   if (text === undefined || !user) return null
   if (text === null) {
     return (
-      <AppLayout back="/" title="Текст не найден">
-        <p className="text-muted">Этого текста нет на устройстве. Вернитесь к списку и обновите его.</p>
+      <AppLayout back="/" title={t('text.notFound')}>
+        <p className="text-muted">{t('text.notOnDevice')}</p>
       </AppLayout>
     )
   }
@@ -54,8 +57,8 @@ export function SessionPage() {
 
   function addQuestion() {
     const q = draft.trim()
-    if (q.split(/\s+/).length < 3) return setError('Напиши вопрос полностью — хотя бы три слова.')
-    if (questions.some((x) => x.trim().toLowerCase() === q.toLowerCase())) return setError('Такой вопрос уже был. Придумай другой.')
+    if (q.split(/\s+/).length < 3) return setError(t('session.tooShort'))
+    if (questions.some((x) => x.trim().toLowerCase() === q.toLowerCase())) return setError(t('session.repeat'))
     setError(null)
     setQuestions([...questions, q])
     setDraft('')
@@ -94,7 +97,7 @@ export function SessionPage() {
       back={`/texts/${text.id}`}
       title={text.title}
       header={
-        <div className="flex gap-2" aria-label={`Шаг ${step + 1} из ${QUESTIONS + 1}`}>
+        <div className="flex gap-2" aria-label={t('session.step', { n: step + 1, m: QUESTIONS + 1 })}>
           {Array.from({ length: QUESTIONS + 1 }, (_, i) => (
             <span key={i} className={`h-2 flex-1 rounded-full ${i <= step ? 'bg-white' : 'bg-white/25'}`} />
           ))}
@@ -104,16 +107,16 @@ export function SessionPage() {
       {asking ? (
         <div className="space-y-5">
           <div>
-            <p className="text-sm text-muted">Вопрос {step + 1} из {QUESTIONS}</p>
-            <h2 className="mt-1 text-xl font-semibold">Задай вопрос к тексту</h2>
-            <p className="mt-1 text-muted">Чем глубже вопрос, тем больше очков. Ответ знать не нужно — обыграй ИИ!</p>
+            <p className="text-sm text-muted">{t('session.questionOf', { n: step + 1, m: QUESTIONS })}</p>
+            <h2 className="mt-1 text-xl font-semibold">{t('session.askTitle')}</h2>
+            <p className="mt-1 text-muted">{t('session.askSub')}</p>
           </div>
 
           <ol className="grid grid-cols-2 gap-2 text-sm">
             {LADDER.map((l) => (
-              <li key={l.label} className="rounded-2xl bg-primary-soft p-3">
-                <span className="font-semibold text-primary">{l.label}</span> <span className="text-muted">+{l.points}</span>
-                <span className="mt-0.5 block text-muted">{l.example}</span>
+              <li key={l.level} className="rounded-2xl bg-primary-soft p-3">
+                <span className="font-semibold text-primary">{t(`level.${l.level}`)}</span> <span className="text-muted">+{l.points}</span>
+                <span className="mt-0.5 block text-muted">{t(`session.ex.${l.level}`)}</span>
               </li>
             ))}
           </ol>
@@ -129,8 +132,8 @@ export function SessionPage() {
           )}
 
           <TextArea
-            label={`Вопрос ${step + 1}`}
-            placeholder="Например: почему…? что будет, если…?"
+            label={t('session.question', { n: step + 1 })}
+            placeholder={t('session.placeholder')}
             value={draft}
             maxLength={MAX_QUESTION}
             onChange={(e) => setDraft(e.target.value)}
@@ -138,16 +141,16 @@ export function SessionPage() {
             autoFocus
           />
           <Button onClick={addQuestion} disabled={!draft.trim()}>
-            {step + 1 < QUESTIONS ? 'Следующий вопрос' : 'К выводу'}
+            {step + 1 < QUESTIONS ? t('session.nextQuestion') : t('session.toConclusion')}
           </Button>
 
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setShowText(!showText)}>
-              {showText ? 'Скрыть текст' : 'Перечитать текст'}
+              {showText ? t('session.hideText') : t('session.rereadText')}
             </Button>
             {text.hints.length > 0 && (
               <Button variant="secondary" onClick={() => setHint(hint + 1)}>
-                Подсказка
+                {t('session.hint')}
               </Button>
             )}
           </div>
@@ -163,13 +166,13 @@ export function SessionPage() {
       ) : (
         <div className="space-y-5">
           <div>
-            <p className="text-sm text-muted">Последний шаг</p>
-            <h2 className="mt-1 text-xl font-semibold">Твой вывод</h2>
-            <p className="mt-1 text-muted">Что главное ты понял из текста? 1–3 предложения своими словами. До +20 очков.</p>
+            <p className="text-sm text-muted">{t('session.lastStep')}</p>
+            <h2 className="mt-1 text-xl font-semibold">{t('session.yourConclusion')}</h2>
+            <p className="mt-1 text-muted">{t('session.conclusionSub')}</p>
           </div>
           <TextArea
-            label="Вывод"
-            placeholder="Главное в тексте — …"
+            label={t('session.conclusion')}
+            placeholder={t('session.conclusionPlaceholder')}
             rows={4}
             value={conclusion}
             maxLength={MAX_CONCLUSION}
@@ -177,10 +180,10 @@ export function SessionPage() {
             autoFocus
           />
           <Button onClick={finish} loading={saving}>
-            Готово — узнать результат
+            {t('session.finish')}
           </Button>
           <button type="button" onClick={() => setShowText(!showText)} className="w-full text-center font-medium text-primary">
-            {showText ? 'Скрыть текст' : 'Перечитать текст'}
+            {showText ? t('session.hideText') : t('session.rereadText')}
           </button>
           {showText && (
             <div className="rounded-3xl border-2 border-line p-4">

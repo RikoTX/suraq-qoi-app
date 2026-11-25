@@ -3,9 +3,10 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AppLayout } from '../../components/AppLayout'
 import { Button } from '../../components/Button'
+import { useI18n } from '../../i18n/useI18n'
 import { db } from '../../offline/db'
 import { flushOutbox } from '../../offline/outbox'
-import { finalLevel, isPending, LEVEL_POINTS, LEVELS, sessionPoints, shownLevel } from '../../scoring/points'
+import { finalLevel, isPending, LEVEL_POINTS, sessionPoints, shownLevel } from '../../scoring/points'
 
 /**
  * Итог сессии. Читает из IndexedDB и обновляется сам, когда приходит оценка ИИ.
@@ -23,12 +24,13 @@ export function ResultPage() {
   }, [id])
   const [sending, setSending] = useState(false)
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   if (data === undefined) return null
   if (data === null) {
     return (
-      <AppLayout back="/" title="Сессия не найдена">
-        <p className="text-muted">Её нет на этом устройстве.</p>
+      <AppLayout back="/" title={t('result.notFound')}>
+        <p className="text-muted">{t('result.notOnDevice')}</p>
       </AppLayout>
     )
   }
@@ -46,13 +48,13 @@ export function ResultPage() {
   return (
     <AppLayout
       back="/"
-      title="Итог"
+      title={t('result.title')}
       header={
         <div className="rounded-3xl bg-pink-soft p-5 text-ink">
           <p className="text-sm text-muted">{session.textTitle}</p>
           <p className={`mt-1 text-4xl font-semibold ${pending ? 'text-muted' : 'text-primary'}`}>+{points}</p>
           <p className="mt-1 text-sm text-muted">
-            {pending ? 'Предварительно — ИИ проверит, когда появится интернет' : 'очков · проверено ИИ'}
+            {pending ? t('result.pending') : t('result.checked')}
           </p>
         </div>
       }
@@ -69,15 +71,15 @@ export function ResultPage() {
               </p>
               <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                 <span className={`rounded-full px-3 py-1 font-medium ${checked ? 'bg-primary text-white' : 'bg-line text-muted'}`}>
-                  {LEVELS[level].label}
+                  {t(`level.${level}` as 'level.0')}
                 </span>
                 <span className={checked ? 'font-medium text-primary' : 'text-muted'}>+{LEVEL_POINTS[level]}</span>
-                {q.levelTeacher !== null && <span className="text-muted">· оценка учителя</span>}
-                {!checked && <span className="text-muted">· предварительно</span>}
+                {q.levelTeacher !== null && <span className="text-muted">{t('result.byTeacher')}</span>}
+                {!checked && <span className="text-muted">{t('result.preliminary')}</span>}
               </p>
               {deeper && (
                 <p className="mt-2 text-sm font-medium text-primary">
-                  Вопрос оказался глубже, +{LEVEL_POINTS[level] - LEVEL_POINTS[q.levelLocal]} очков
+                  {t('result.deeper', { n: LEVEL_POINTS[level] - LEVEL_POINTS[q.levelLocal] })}
                 </p>
               )}
               {q.comment && <p className="mt-2 text-sm">{q.comment}</p>}
@@ -88,13 +90,13 @@ export function ResultPage() {
 
         {session.conclusion && (
           <article className="rounded-3xl border-2 border-line p-4">
-            <p className="text-sm text-muted">Твой вывод</p>
+            <p className="text-sm text-muted">{t('session.yourConclusion')}</p>
             <p className="mt-1">{session.conclusion}</p>
             <p className="mt-3 text-sm">
               <span className={session.conclusionScore !== null ? 'font-medium text-primary' : 'text-muted'}>
-                +{session.conclusionScore ?? session.conclusionScoreLocal} из 20
+                {t('result.of20', { n: session.conclusionScore ?? session.conclusionScoreLocal })}
               </span>
-              {session.conclusionScore === null && <span className="text-muted"> · предварительно</span>}
+              {session.conclusionScore === null && <span className="text-muted"> {t('result.preliminary')}</span>}
             </p>
             {session.conclusionComment && <p className="mt-2 text-sm">{session.conclusionComment}</p>}
           </article>
@@ -102,16 +104,16 @@ export function ResultPage() {
 
         {queued && (
           <div className="rounded-3xl bg-primary-soft p-4 text-sm">
-            <p>Ответы сохранены на телефоне и ждут отправки. Ничего не потеряется.</p>
+            <p>{t('result.queued')}</p>
             <Button variant="secondary" className="mt-3" loading={sending} onClick={sendNow}>
-              Отправить сейчас
+              {t('result.sendNow')}
             </Button>
           </div>
         )}
 
-        <Button onClick={() => navigate('/')}>К текстам</Button>
+        <Button onClick={() => navigate('/')}>{t('result.toTexts')}</Button>
         <Link to={`/texts/${session.textId}/ask`} className="block text-center font-medium text-primary">
-          Задать новые вопросы к этому тексту
+          {t('result.askAgain')}
         </Link>
       </div>
     </AppLayout>

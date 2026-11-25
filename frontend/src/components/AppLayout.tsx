@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/useAuth'
+import { LangSwitch } from '../i18n/LangSwitch'
+import { useI18n } from '../i18n/useI18n'
 import { Logo } from './Logo'
 
 type Props = {
@@ -17,6 +19,9 @@ type Props = {
 /** Экран после входа в стиле Queezy: фиолетовая шапка + белый лист. */
 export function AppLayout({ eyebrow, title, back, header, children }: Props) {
   const { user, signOut } = useAuth()
+  const { t } = useI18n()
+  // Экраны учителя пока только на русском — переключатель языка только у ученика.
+  const student = user?.role === 'student'
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
       <header className="relative overflow-hidden px-6 pt-10 pb-8 text-white">
@@ -25,16 +30,19 @@ export function AppLayout({ eyebrow, title, back, header, children }: Props) {
 
         <div className="relative flex items-center justify-between">
           {back ? (
-            <Link to={back} className="flex size-10 items-center justify-center rounded-2xl bg-white/15 text-xl" aria-label="Назад">
+            <Link to={back} className="flex size-10 items-center justify-center rounded-2xl bg-white/15 text-xl" aria-label={t('common.backAria')}>
               ←
             </Link>
           ) : (
             <Logo size={40} />
           )}
           {/* Ученик не «выходит», а уступает телефон: его данные остаются на устройстве (ТЗ, 7.0.2). */}
-          <button onClick={signOut} className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-medium hover:bg-white/25">
-            {user?.role === 'student' ? 'Сменить ученика' : 'Выйти'}
-          </button>
+          <div className="flex items-center gap-2">
+            {student && <LangSwitch />}
+            <button onClick={signOut} className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-medium hover:bg-white/25">
+              {student ? t('layout.switchStudent') : 'Выйти'}
+            </button>
+          </div>
         </div>
 
         {eyebrow && <p className="relative mt-6 text-sm uppercase tracking-wide text-white/70">{eyebrow}</p>}

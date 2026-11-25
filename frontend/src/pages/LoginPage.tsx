@@ -8,30 +8,36 @@ import { Button } from '../components/Button'
 import { PinField } from '../components/PinField'
 import { RoleSwitch } from '../components/RoleSwitch'
 import { TextField } from '../components/TextField'
+import { useI18n } from '../i18n/useI18n'
 import { db, type Profile } from '../offline/db'
 import { needsPin, pendingCount, removeProfile, unlockProfile } from '../offline/profiles'
 
-const message = (err: unknown) => (err instanceof ApiError ? err.message : 'Что-то пошло не так')
+/** Текст ошибки на языке интерфейса (сервер отвечает на русском). */
+function useMessage() {
+  const { t, err } = useI18n()
+  return (e: unknown) => (e instanceof ApiError ? err(e.message) : t('common.error'))
+}
 
 /** Вход. Ученики, уже входившие на этом телефоне, — сверху: переключиться можно и без сети. */
 export function LoginPage() {
   const profiles = useLiveQuery(async () => (await db.profiles.toArray()).sort((a, b) => a.name.localeCompare(b.name)), [])
   const [role, setRole] = useState<'student' | 'teacher'>('student')
   const [adding, setAdding] = useState(false)
+  const { t } = useI18n()
 
   if (profiles === undefined) return null
   const showProfiles = profiles.length > 0 && !adding
 
   return (
     <AuthLayout
-      title={showProfiles ? 'Кто занимается?' : 'Сәлем!'}
-      subtitle={showProfiles ? 'Выбери себя — или войди другим учеником' : 'Войди, чтобы задавать вопросы к текстам'}
+      title={showProfiles ? t('login.who') : t('app.hello')}
+      subtitle={showProfiles ? t('login.whoSub') : t('login.sub')}
     >
       {showProfiles ? (
         <>
           <DeviceProfiles profiles={profiles} />
           <Button variant="secondary" className="mt-6" onClick={() => setAdding(true)}>
-            Другой ученик или учитель
+            {t('login.other')}
           </Button>
         </>
       ) : (
@@ -40,7 +46,7 @@ export function LoginPage() {
           {role === 'student' ? <StudentLogin /> : <TeacherLogin />}
           {profiles.length > 0 && (
             <button type="button" onClick={() => setAdding(false)} className="w-full text-center font-medium text-primary">
-              ← Ученики на этом телефоне
+              {t('login.backToProfiles')}
             </button>
           )}
         </div>
@@ -56,6 +62,7 @@ function DeviceProfiles({ profiles }: { profiles: Profile[] }) {
   const [locked, setLocked] = useState<Profile | null>(null)
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const { t, rich } = useI18n()
 
   function open(p: Profile) {
     signIn(p.auth)
@@ -73,16 +80,16 @@ function DeviceProfiles({ profiles }: { profiles: Profile[] }) {
     e.preventDefault()
     if (!locked) return
     if (await unlockProfile(locked, pin)) open(locked)
-    else setError('Неверный PIN')
+    else setError(t('login.wrongPin'))
   }
 
   async function remove(p: Profile) {
     const pending = await pendingCount(p.userId)
     if (pending > 0) {
-      alert(`У ${p.name} есть неотправленные ответы (${pending}). Подключитесь к интернету и откройте приложение — они отправятся, и тогда можно будет убрать ученика с телефона.`)
+      alert(t('login.unsent', { name: p.name, n: pending }))
       return
     }
-    if (confirm(`Убрать ${p.name} с этого телефона? Аккаунт останется — войти можно по коду класса и PIN.`)) {
+    if (confirm(t('login.removeConfirm', { name: p.name }))) {
       await removeProfile(p.userId)
     }
   }
@@ -90,15 +97,13 @@ function DeviceProfiles({ profiles }: { profiles: Profile[] }) {
   if (locked) {
     return (
       <form onSubmit={onUnlock} className="space-y-5" noValidate>
-        <p className="text-lg">
-          Привет, <b>{locked.name}</b>! Введи свой PIN.
-        </p>
+        <p className="text-lg">{rich('login.hello', { name: <b>{locked.name}</b> })}</p>
         <PinField value={pin} onChange={setPin} error={error ?? undefined} autoFocus />
         <Button type="submit" disabled={pin.length !== 4}>
-          Продолжить
+          {t('login.continue')}
         </Button>
         <button type="button" onClick={() => setLocked(null)} className="w-full text-center font-medium text-primary">
-          Это не я
+          {t('login.notMe')}
         </button>
       </form>
     )
@@ -114,16 +119,16 @@ function DeviceProfiles({ profiles }: { profiles: Profile[] }) {
             </span>
             <span className="min-w-0">
               <span className="block truncate font-medium">{p.name}</span>
-              <span className="block truncate text-sm text-muted">{p.className ? `Класс ${p.className}` : 'Без класса'}</span>
+              <span className="block truncate text-sm text-muted">{p.className ? t('common.class', { name: p.className }) : t('common.noClass')}</span>
             </span>
           </button>
           <button
             type="button"
             onClick={() => remove(p)}
             className="shrink-0 rounded-xl px-2 py-1 text-xs font-medium text-muted hover:bg-pink-soft hover:text-danger"
-            aria-label={`Убрать ${p.name} с телефона`}
+            aria-label={t('login.removeAria', { name: p.name })}
           >
-            Убрать
+            {t('login.remove')}
           </button>
         </li>
       ))}
@@ -144,6 +149,8 @@ function StudentLogin() {
   const [fields, setFields] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { t, err, rich, setLang } = useI18n()
+  const message = useMessage()
 
   async function run(action: () => Promise<void>) {
     setError(null)
@@ -151,9 +158,10 @@ function StudentLogin() {
     setLoading(true)
     try {
       await action()
-    } catch (err) {
-      if (err instanceof ApiError && Object.keys(err.fields).length > 0) setFields(err.fields)
-      else setError(message(err))
+    } catch (e) {
+      if (e instanceof ApiError && Object.keys(e.fields).length > 0)
+        setFields(Object.fromEntries(Object.entries(e.fields).map(([k, v]) => [k, err(v)])))
+      else setError(message(e))
     } finally {
       setLoading(false)
     }
@@ -178,6 +186,8 @@ function StudentLogin() {
           e.preventDefault()
           void run(async () => {
             const cls = await studentAuthApi.lookupClass(code)
+            // Язык интерфейса — как у класса, если ученик сам его не выбирал.
+            setLang(cls.lang, false)
             setStep(cls.students.length ? { kind: 'pick', cls } : { kind: 'new', cls })
           })
         }}
@@ -185,7 +195,7 @@ function StudentLogin() {
         noValidate
       >
         <TextField
-          label="Код класса"
+          label={t('login.classCode')}
           placeholder="8A-4821"
           autoCapitalize="characters"
           autoComplete="off"
@@ -193,9 +203,9 @@ function StudentLogin() {
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           error={error ?? undefined}
         />
-        <p className="text-sm text-muted">Код даст учитель. Email не нужен.</p>
+        <p className="text-sm text-muted">{t('login.codeHint')}</p>
         <Button type="submit" loading={loading} disabled={code.trim().length < 5}>
-          Дальше
+          {t('common.next')}
         </Button>
       </form>
     )
@@ -204,9 +214,7 @@ function StudentLogin() {
   if (step.kind === 'pick') {
     return (
       <div className="space-y-4">
-        <p className="text-lg">
-          Класс <b>{step.cls.className}</b>. Найди себя:
-        </p>
+        <p className="text-lg">{rich('login.findYourself', { name: <b>{step.cls.className}</b> })}</p>
         <ul className="grid grid-cols-2 gap-2">
           {step.cls.students.map((s) => (
             <li key={s.id}>
@@ -221,10 +229,10 @@ function StudentLogin() {
           ))}
         </ul>
         <Button variant="secondary" onClick={() => setStep({ kind: 'new', cls: step.cls })}>
-          Меня нет в списке — я новенький
+          {t('login.imNew')}
         </Button>
         <button type="button" onClick={back({ kind: 'code' })} className="w-full text-center font-medium text-primary">
-          ← Другой код
+          {t('login.otherCode')}
         </button>
       </div>
     )
@@ -240,16 +248,14 @@ function StudentLogin() {
         className="space-y-5"
         noValidate
       >
-        <p className="text-lg">
-          Привет, <b>{step.who.name}</b>! Введи свой PIN.
-        </p>
+        <p className="text-lg">{rich('login.hello', { name: <b>{step.who.name}</b> })}</p>
         <PinField value={pin} onChange={setPin} error={error ?? undefined} autoFocus />
-        <p className="text-sm text-muted">Забыл PIN? Учитель выдаст новый.</p>
+        <p className="text-sm text-muted">{t('login.forgotPin')}</p>
         <Button type="submit" loading={loading} disabled={pin.length !== 4}>
-          Войти
+          {t('login.signIn')}
         </Button>
         <button type="button" onClick={back({ kind: 'pick', cls: step.cls })} className="w-full text-center font-medium text-primary">
-          ← Это не я
+          {t('login.notMeBack')}
         </button>
       </form>
     )
@@ -264,33 +270,31 @@ function StudentLogin() {
       className="space-y-5"
       noValidate
     >
-      <p className="text-lg">
-        Класс <b>{step.cls.className}</b>. Как тебя зовут?
-      </p>
+      <p className="text-lg">{rich('login.whatName', { name: <b>{step.cls.className}</b> })}</p>
       <TextField
-        label="Имя"
-        placeholder="Например, Айгерим"
+        label={t('login.name')}
+        placeholder={t('login.namePlaceholder')}
         autoComplete="off"
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={fields.name}
       />
-      <PinField label="Придумай PIN из 4 цифр" value={pin} onChange={setPin} error={fields.pin} />
-      <p className="text-sm text-muted">Запомни PIN — его спросят при входе. Фамилию писать не нужно.</p>
+      <PinField label={t('login.newPin')} value={pin} onChange={setPin} error={fields.pin} />
+      <p className="text-sm text-muted">{t('login.newPinHint')}</p>
       {error && (
         <p role="alert" className="rounded-2xl bg-pink-soft px-4 py-3 text-sm text-danger">
           {error}
         </p>
       )}
       <Button type="submit" loading={loading} disabled={name.trim().length < 2 || pin.length !== 4}>
-        Готово
+        {t('common.done')}
       </Button>
       <button
         type="button"
         onClick={back(step.cls.students.length ? { kind: 'pick', cls: step.cls } : { kind: 'code' })}
         className="w-full text-center font-medium text-primary"
       >
-        ← Назад
+        {t('common.back')}
       </button>
     </form>
   )
@@ -303,6 +307,8 @@ function TeacherLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { t } = useI18n()
+  const message = useMessage()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -311,8 +317,8 @@ function TeacherLogin() {
     try {
       signIn(await authApi.login(email, password))
       navigate('/', { replace: true })
-    } catch (err) {
-      setError(message(err))
+    } catch (e) {
+      setError(message(e))
     } finally {
       setLoading(false)
     }
@@ -331,10 +337,10 @@ function TeacherLogin() {
           required
         />
         <TextField
-          label="Пароль"
+          label={t('login.password')}
           type="password"
           autoComplete="current-password"
-          placeholder="Ваш пароль"
+          placeholder={t('login.passwordPlaceholder')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -345,13 +351,13 @@ function TeacherLogin() {
           </p>
         )}
         <Button type="submit" loading={loading}>
-          Войти
+          {t('login.signIn')}
         </Button>
       </form>
       <p className="text-center text-muted">
-        Нет аккаунта учителя?{' '}
+        {t('login.noTeacherAccount')}{' '}
         <Link to="/register" className="font-medium text-primary">
-          Зарегистрироваться
+          {t('login.register')}
         </Link>
       </p>
     </>

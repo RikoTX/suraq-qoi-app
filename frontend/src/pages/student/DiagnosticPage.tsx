@@ -1,16 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { SKILL_LABEL, SKILLS, type DiagnosticForm } from '../../api/diagnostics'
+import { SKILLS, type DiagnosticForm } from '../../api/diagnostics'
 import { useAuth } from '../../auth/useAuth'
 import { AppLayout } from '../../components/AppLayout'
 import { Button } from '../../components/Button'
 import { Markdown } from '../../components/Markdown'
+import { useI18n } from '../../i18n/useI18n'
 import { db } from '../../offline/db'
 import { cachedStatus, score } from '../../offline/diagnostics'
 import { flushOutbox } from '../../offline/outbox'
-
-const TITLE = { pre: 'Входная проверка', post: 'Итоговая проверка' } as const
 
 /**
  * Мини-диагностика (ТЗ, 11.1): 2 текста по 3 задания с выбором ответа. Работает без сети —
@@ -25,9 +24,10 @@ export function DiagnosticPage() {
     const form = (await cachedStatus(user.id))?.forms.find((f) => f.kind === kind) ?? null
     return { done, form }
   }, [user, kind])
+  const { t } = useI18n()
 
   if (data === undefined || !user) return null
-  const title = kind === 'post' ? TITLE.post : TITLE.pre
+  const title = kind === 'post' ? t('diag.post') : t('diag.pre')
 
   if (data?.done) {
     return (
@@ -39,7 +39,7 @@ export function DiagnosticPage() {
   if (!data?.form) {
     return (
       <AppLayout back="/" title={title}>
-        <p className="text-muted">Проверка сейчас недоступна. Вернитесь на главную, когда будет связь.</p>
+        <p className="text-muted">{t('diag.unavailable')}</p>
       </AppLayout>
     )
   }
@@ -51,6 +51,7 @@ function Quiz({ form, userId, title }: { form: DiagnosticForm; userId: string; t
   const [page, setPage] = useState(0)
   const [answers, setAnswers] = useState<(number | null)[]>(() => form.texts.flatMap((t) => t.tasks.map(() => null)))
   const [saving, setSaving] = useState(false)
+  const { t } = useI18n()
 
   const text = form.texts[page]
   const offset = form.texts.slice(0, page).reduce((n, t) => n + t.tasks.length, 0)
@@ -87,13 +88,12 @@ function Quiz({ form, userId, title }: { form: DiagnosticForm; userId: string; t
   return (
     <AppLayout
       back="/"
-      eyebrow={`Текст ${page + 1} из ${form.texts.length}`}
+      eyebrow={t('diag.textOf', { n: page + 1, m: form.texts.length })}
       title={title}
     >
       {page === 0 && (
         <p className="mb-5 rounded-2xl bg-primary-soft px-4 py-3 text-sm">
-          Прочитай текст и выбери один ответ на каждый вопрос. Это не оценка в журнал: учитель увидит, как ты читаешь
-          сейчас, а через несколько недель — что изменилось. Текст можно перечитывать.
+          {t('diag.intro')}
         </p>
       )}
 
@@ -105,15 +105,15 @@ function Quiz({ form, userId, title }: { form: DiagnosticForm; userId: string; t
       </article>
 
       <ol className="mt-6 space-y-6">
-        {text.tasks.map((t, i) => {
+        {text.tasks.map((task, i) => {
           const n = offset + i
           return (
             <li key={n}>
               <p className="font-medium">
-                {n + 1}. {t.q}
+                {n + 1}. {task.q}
               </p>
-              <div className="mt-3 space-y-2" role="radiogroup" aria-label={`Вопрос ${n + 1}`}>
-                {t.options.map((o, j) => {
+              <div className="mt-3 space-y-2" role="radiogroup" aria-label={t('session.question', { n: n + 1 })}>
+                {task.options.map((o, j) => {
                   const active = answers[n] === j
                   return (
                     <button
@@ -137,36 +137,35 @@ function Quiz({ form, userId, title }: { form: DiagnosticForm; userId: string; t
       </ol>
 
       <Button className="mt-8" disabled={!pageDone} loading={saving} onClick={next}>
-        {last ? 'Готово' : 'Дальше'}
+        {last ? t('common.done') : t('common.next')}
       </Button>
-      {!pageDone && <p className="mt-2 text-center text-sm text-muted">Ответь на все вопросы этого текста</p>}
+      {!pageDone && <p className="mt-2 text-center text-sm text-muted">{t('diag.answerAll')}</p>}
     </AppLayout>
   )
 }
 
 function Result({ score, skills, kind, synced }: { score: number; skills: number[]; kind: 'pre' | 'post'; synced: boolean }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-6">
       <div className="rounded-3xl bg-primary-soft p-5 text-center">
-        <p className="text-4xl font-semibold text-primary">{score} из 6</p>
-        <p className="mt-1 text-muted">верных ответов</p>
+        <p className="text-4xl font-semibold text-primary">{t('diag.score', { n: score })}</p>
+        <p className="mt-1 text-muted">{t('diag.correct')}</p>
       </div>
       <ul className="space-y-2 text-sm">
         {SKILLS.map((s, i) => (
           <li key={s} className="flex items-center justify-between rounded-2xl border-2 border-line px-4 py-3">
-            <span>{SKILL_LABEL[s]}</span>
-            <span className="font-medium">{skills[i]} из 2</span>
+            <span>{t(`skill.${s}`)}</span>
+            <span className="font-medium">{t('diag.skillScore', { n: skills[i] })}</span>
           </li>
         ))}
       </ul>
       <p className="text-sm text-muted">
-        {kind === 'pre'
-          ? 'Спасибо! Теперь задавай вопросы к текстам — через несколько недель будет итоговая проверка.'
-          : 'Спасибо! Учитель сравнит результат со входной проверкой.'}
-        {!synced && ' Результат сохранён на устройстве и отправится, когда появится связь.'}
+        {kind === 'pre' ? t('diag.thanksPre') : t('diag.thanksPost')}
+        {!synced && t('diag.notSynced')}
       </p>
       <Link to="/" className="block w-full rounded-2xl bg-primary px-6 py-4 text-center font-medium text-white hover:bg-primary-dark">
-        К текстам
+        {t('result.toTexts')}
       </Link>
     </div>
   )

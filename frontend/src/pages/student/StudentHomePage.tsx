@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/useAuth'
 import { AppLayout } from '../../components/AppLayout'
 import { Button } from '../../components/Button'
 import { TextField } from '../../components/TextField'
+import { useI18n } from '../../i18n/useI18n'
 import { getMeta, setMeta } from '../../offline/db'
 import { updateProfileClass } from '../../offline/profiles'
 import { DiagnosticCard } from './DiagnosticCard'
@@ -19,6 +20,7 @@ export function StudentHomePage() {
   const { user, token } = useAuth()
   const [me, setMe] = useState<StudentMe | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { t, err } = useI18n()
 
   useEffect(() => {
     if (!token || !user) return
@@ -36,13 +38,13 @@ export function StudentHomePage() {
         // Нет связи — берём профиль с прошлого входа, чтобы тексты открывались офлайн.
         const cached = await getMeta(meKey(user.id))
         if (cached && e instanceof ApiError && e.offline) setMe(JSON.parse(cached) as StudentMe)
-        else setError(e instanceof ApiError ? e.message : 'Не удалось загрузить профиль')
+        else setError(e instanceof ApiError ? err(e.message) : t('home.profileError'))
       })
-  }, [token, user])
+  }, [token, user, t, err])
 
   return (
     <AppLayout
-      eyebrow="Сәлем!"
+      eyebrow={t('app.hello')}
       title={user?.name ?? ''}
       header={
         me?.class && (
@@ -51,18 +53,18 @@ export function StudentHomePage() {
               {me.class.name.slice(0, 3)}
             </span>
             <div>
-              <p className="text-sm text-muted">Мой класс</p>
+              <p className="text-sm text-muted">{t('home.myClass')}</p>
               <p className="font-semibold">
                 {me.class.name} · {LANG_LABEL[me.class.lang]}
               </p>
-              <p className="text-sm text-muted">Учитель: {me.class.teacherName}</p>
+              <p className="text-sm text-muted">{t('home.teacher', { name: me.class.teacherName })}</p>
             </div>
           </div>
         )
       }
     >
       {error && <p className="rounded-2xl bg-pink-soft px-4 py-3 text-sm">{error}</p>}
-      {!me && !error && <p className="text-muted">Загрузка…</p>}
+      {!me && !error && <p className="text-muted">{t('common.loading')}</p>}
       {me && !me.class && (
         <JoinClassForm
           onJoined={(c) => {
@@ -82,7 +84,8 @@ export function StudentHomePage() {
 
 function ClassHome({ userId, token, me, classId }: { userId: string; token: string | null; me: StudentMe; classId: string }) {
   const diagnostic = useDiagnosticPlan(userId, token)
-  if (diagnostic === undefined) return <p className="text-muted">Загрузка…</p>
+  const { t } = useI18n()
+  if (diagnostic === undefined) return <p className="text-muted">{t('common.loading')}</p>
   return (
     <div className="space-y-8">
       <DiagnosticCard plan={diagnostic} />
@@ -102,6 +105,7 @@ function JoinClassForm({ onJoined }: { onJoined: (c: StudentClass) => void }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { t, err: tr } = useI18n()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -111,7 +115,7 @@ function JoinClassForm({ onJoined }: { onJoined: (c: StudentClass) => void }) {
     try {
       onJoined(await studentApi.joinClass(token, code))
     } catch (err) {
-      setError(err instanceof ApiError ? (err.fields.joinCode ?? err.message) : 'Что-то пошло не так')
+      setError(err instanceof ApiError ? tr(err.fields.joinCode ?? err.message) : t('common.error'))
     } finally {
       setLoading(false)
     }
@@ -120,11 +124,13 @@ function JoinClassForm({ onJoined }: { onJoined: (c: StudentClass) => void }) {
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
       <div>
-        <h2 className="text-xl font-semibold">Вступите в класс</h2>
-        <p className="mt-1 text-muted">Код класса даст учитель, например <span className="whitespace-nowrap">8A-4821</span>.</p>
+        <h2 className="text-xl font-semibold">{t('home.joinTitle')}</h2>
+        <p className="mt-1 text-muted">
+          {t('home.joinHint')} <span className="whitespace-nowrap">8A-4821</span>.
+        </p>
       </div>
       <TextField
-        label="Код класса"
+        label={t('login.classCode')}
         placeholder="8A-4821"
         autoCapitalize="characters"
         autoComplete="off"
@@ -133,7 +139,7 @@ function JoinClassForm({ onJoined }: { onJoined: (c: StudentClass) => void }) {
         error={error ?? undefined}
       />
       <Button type="submit" loading={loading}>
-        Вступить
+        {t('home.join')}
       </Button>
     </form>
   )
