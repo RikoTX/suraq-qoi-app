@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 namespace SuraqQoi.Api.Data.DevSeed;
 
 /// <summary>
-/// Только для локальной разработки: если таблица texts пуста, кладёт несколько примеров
-/// (reviewed = false), чтобы проверять экран админа и пакет ученика без ключа OpenAI.
+/// Только для локальной разработки: если таблица texts пуста, кладёт общую библиотеку
+/// (Data/Library/library.json, 26 текстов kk/ru, reviewed = false) — работать можно без ключа ИИ.
+/// На сервере библиотеку загружает команда import-texts (backend/deploy/README.md).
 /// </summary>
 public static class DevTextSeeder
 {
@@ -17,7 +18,7 @@ public static class DevTextSeeder
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         if (await db.Texts.AnyAsync()) return;
 
-        var path = Path.Combine(env.ContentRootPath, "Data", "DevSeed", "sample-texts.json");
+        var path = Path.Combine(env.ContentRootPath, "Data", "Library", "library.json");
         if (!File.Exists(path)) return;
 
         var items = JsonNode.Parse(await File.ReadAllTextAsync(path))!.AsArray();

@@ -12,7 +12,7 @@ ASP.NET Core **.NET 9** (Minimal APIs) · EF Core 9 + Npgsql · PostgreSQL 17 ·
 
 ```bash
 docker compose up -d          # PostgreSQL: localhost:5433 (не 5432 — там может быть системный Postgres)
-dotnet ef database update     # миграции
+dotnet ef database update     # миграции (на сервере применяются сами при старте)
 dotnet run                    # http://localhost:8080
 ```
 
@@ -23,15 +23,26 @@ dotnet run                    # http://localhost:8080
 | Путь | Что |
 |---|---|
 | `Program.cs` | DI, JWT, ProblemDetails, `/health`, подключение эндпоинтов |
-| `Auth/` | `AuthEndpoints` (`/api/auth/register`, `/login`, `/me`), `JwtTokenService`, `AdminSeeder` |
+| `Auth/` | `AuthEndpoints` (учитель: `/api/auth/register`, `/login`, `/me`), `StudentAuthEndpoints` (ученик: `/api/auth/student/class`, `/register`, `/login` по коду + имени + PIN; сброс PIN учителем), `JwtTokenService`, `AdminSeeder` |
 | `Data/Entities.cs` | Все сущности: `User` (+ `UserRole`), `SchoolClass`, `Student`, `ReadingText`, `Session`, `Question` |
 | `Data/AppDbContext.cs` | Таблицы, индексы, связи |
 | `Migrations/` | Миграции EF Core |
 | `Features/Classes/` | Этап 2: классы учителя, вступление по коду, `GET /api/student/me` |
 | `Features/Texts/` | Этап 3: тексты класса учителя (создать, ИИ, из библиотеки, править, опубликовать), `/api/library`, `GET /api/student/pack` |
 | `Features/Admin/` | Обзор для админа: `/api/admin/stats`, `/users`, `/classes` (только чтение) |
+| `Features/Sessions/` | `POST /api/student/sessions` — приём сессий из очереди устройства, идемпотентно, оценка ИИ в бюджете 6,5 с |
+| `Features/Teacher/` | `/api/classes/{id}/overview` (карта навыков, сигналы, диагностика), `/api/students/{id}`, `PATCH /api/questions/{id}` |
+| `Features/Diagnostics/`, `Data/Diagnostics/` | Мини-диагностика (ТЗ, 11.1): `GET /api/student/diagnostic`, `POST /api/student/diagnostics`, `PUT /api/classes/{id}/diagnostic`; задания — `forms.json` (встроен в сборку, черновик — проверяет учитель) |
+| `Services/Grading/` | `OpenAiGradingService` (Groq/OpenAI, строгая схема; без ключа в Development — правилами), `GradingPrompts`, `HeuristicGrader` (копия — `frontend/src/scoring/heuristic.ts`) |
+| `Services/Scoring/PointsCalculator.cs` | Очки, ранги, стрик, «предварительные» сессии |
+| `tests/` | xUnit (`dotnet test tests`); `heuristic-cases.json` — общие примеры с фронтендом. `tests/Integration/` — настоящий API (`WebApplicationFactory`) на временной базе в Postgres из `docker compose` (или `TEST_POSTGRES`), ИИ заменён `FakeGrader`; без базы — `--filter Category!=Integration` |
 | `Services/Content/TextGenerator.cs` | Генерация текстов через Groq/OpenAI (команда `generate-texts`) |
-| `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста |
+| `Data/Library/` | Общая библиотека: `library.json` (26 текстов kk/ru), `REVIEW.md` — что проверить перед публикацией |
+| `Data/DevSeed/` | Только Development: библиотека из `Data/Library/library.json`, если таблица `texts` пуста. `DemoSeeder` — `dotnet run -- seed-demo`: учитель `demo-teacher@suraqqoi.kz` / `demo-teacher-2026`, класс «8А (демо)», 15 учеников с PIN `1234`, история за 14 дней, диагностика до/после |
+| `Services/Grading/Eval/`, `tests/grading-eval/` | Q2 (ТЗ, 9.4): `dotnet run -- eval-grading [--lang kk] [--out отчёт.md]` — точность ИИ против разметки учителя (`labels.csv`, лист для печати — `LABELING.md`) |
+| `Features/Pilot/` | `dotnet run -- pilot-report <код> [--since 2026-11-26] [--names]` — отчёт по пилоту в markdown (ТЗ, 11; сценарий — `docs/PILOT.md`) |
+| `Data/LibraryTransfer.cs` | `export-texts` / `import-texts file.json` — перенос общей библиотеки между базами (без дублей) |
+| `Dockerfile`, `deploy/` | Сервер: Caddy + API + PostgreSQL (`deploy/docker-compose.yml`, `deploy/Caddyfile`, `.env.example`), инструкция — `deploy/README.md` |
 | `Features/<Фича>/` | Новые эндпоинты — по папке на фичу |
 
 ## Генерация текстов
@@ -68,6 +79,7 @@ dotnet run -- generate-texts --lang kk --topic local --kind schedule --difficult
 
 ```bash
 dotnet build                  # без ошибок
+dotnet test tests             # xUnit; интеграционным нужен docker compose up -d
 ```
 
 Ручная проверка эндпоинтов — через curl или фронтенд. Для кириллицы в curl на Windows отправляй JSON в UTF-8 (Git Bash шлёт cp1251).

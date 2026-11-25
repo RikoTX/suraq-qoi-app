@@ -4,15 +4,16 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using SuraqQoi.Api.Auth;
 using SuraqQoi.Api.Data;
+using SuraqQoi.Api.Services.Scoring;
 
 namespace SuraqQoi.Api.Features.Classes;
 
 public sealed record CreateClassRequest(string Name, string Lang);
 public sealed record JoinClassRequest(string JoinCode);
 public sealed record ClassDto(Guid Id, string Name, string JoinCode, string Lang, int StudentCount, DateTimeOffset CreatedAt);
-public sealed record ClassStudentDto(Guid Id, string Name, string Email, int Points, int Streak, DateOnly? LastActiveDate);
+public sealed record ClassStudentDto(Guid Id, string Name, string? Email, int Points, int Streak, DateOnly? LastActiveDate);
 public sealed record StudentClassDto(Guid Id, string Name, string Lang, string TeacherName);
-public sealed record StudentMeDto(string Name, int Points, int Streak, StudentClassDto? Class);
+public sealed record StudentMeDto(string Name, int Points, string Rank, int Streak, StudentClassDto? Class);
 
 /// <summary>Этап 2: классы учителя, вступление ученика по коду (ТЗ, разделы 7.1–7.2).</summary>
 public static class ClassEndpoints
@@ -114,11 +115,22 @@ public static class ClassEndpoints
     private static async Task<IResult> StudentMe(ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)
     {
         var userId = UserId(principal);
-        var me = await db.Students
+        var row = await db.Students
             .Where(s => s.UserId == userId)
-            .Select(s => new StudentMeDto(s.User!.Name, s.Points, s.Streak,
-                s.Class == null ? null : new StudentClassDto(s.Class.Id, s.Class.Name, s.Class.Lang, s.Class.Teacher!.Name)))
+            .Select(s => new
+            {
+                Me = new StudentMeDto(s.User!.Name, s.Points, "", s.Streak,
+                    s.Class == null ? null : new StudentClassDto(s.Class.Id, s.Class.Name, s.Class.Lang, s.Class.Teacher!.Name)),
+                s.LastActiveDate,
+            })
             .SingleOrDefaultAsync(ct);
+        // Стрик хранится на момент последней сессии; пропущен день — серия прервалась.
+        var today = PointsCalculator.LocalDate(DateTimeOffset.UtcNow);
+        var me = row is null ? null : row.Me with
+        {
+            Rank = PointsCalculator.Rank(row.Me.Points),
+            Streak = row.LastActiveDate >= today.AddDays(-1) ? row.Me.Streak : 0,
+        };
         return me is null
             ? TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Профиль ученика не найден")
             : TypedResults.Ok(me);
@@ -157,7 +169,7 @@ public static class ClassEndpoints
     }
 
     /// <summary>Код вводят как попало: «8а-4821», « 8A 4821 ». Приводим к виду «8A-4821».</summary>
-    private static string NormalizeCode(string? raw)
+    internal static string NormalizeCode(string? raw)
     {
         var s = new string((raw ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
         s = Translit(s);

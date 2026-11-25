@@ -3,7 +3,8 @@ export type Role = 'student' | 'teacher' | 'admin'
 export interface User {
   id: string
   name: string
-  email: string
+  /** null у ученика: он входит по коду класса + имени + PIN */
+  email: string | null
   role: Role
 }
 
@@ -59,8 +60,32 @@ export const authApi = {
   login: (email: string, password: string) =>
     request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
-  register: (data: { name: string; email: string; password: string; role: Exclude<Role, 'admin'> }) =>
-    request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  /** Регистрация учителя. Ученики регистрируются по коду класса (studentAuthApi). */
+  register: (data: { name: string; email: string; password: string }) =>
+    request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify({ ...data, role: 'teacher' }) }),
 
   me: (token: string) => request<User>('/auth/me', {}, token),
+}
+
+export interface Classmate {
+  /** id пользователя */
+  id: string
+  name: string
+}
+
+export interface ClassLookup {
+  className: string
+  lang: 'kk' | 'ru'
+  students: Classmate[]
+}
+
+const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) })
+
+/** Вход ученика без email: код класса → своё имя → PIN из 4 цифр (ТЗ, 7.0.1). */
+export const studentAuthApi = {
+  lookupClass: (joinCode: string) => request<ClassLookup>('/auth/student/class', post({ joinCode })),
+  register: (joinCode: string, name: string, pin: string) =>
+    request<AuthResponse>('/auth/student/register', post({ joinCode, name, pin })),
+  login: (joinCode: string, studentId: string, pin: string) =>
+    request<AuthResponse>('/auth/student/login', post({ joinCode, studentId, pin })),
 }

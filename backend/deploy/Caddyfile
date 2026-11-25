@@ -1,0 +1,32 @@
+# HTTPS-сертификат Caddy получает сам (Let's Encrypt) для домена из DOMAIN, например 1-2-3-4.sslip.io.
+{$DOMAIN} {
+	# Сжатие: на 2G/EDGE каждый килобайт на счету (ТЗ, 8 и 15).
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle /health {
+		reverse_proxy api:8080
+	}
+
+	# PWA: файлы в /assets/ с хешем в имени — навсегда; остальное (index.html, sw.js, манифест)
+	# проверяется при каждом открытии, иначе новая версия не дойдёт до учеников.
+	handle {
+		root * /srv
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@other not path /assets/*
+		header @other Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

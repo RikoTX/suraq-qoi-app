@@ -22,6 +22,65 @@ namespace SuraqQoi.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SuraqQoi.Api.Data.Diagnostic", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Answers")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("answers");
+
+                    b.Property<string>("Form")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("character varying(1)")
+                        .HasColumnName("form");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Lang")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("lang");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<short>("Score")
+                        .HasColumnType("smallint")
+                        .HasColumnName("score");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTimeOffset>("TakenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("taken_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_diagnostics");
+
+                    b.HasIndex("StudentId", "Kind")
+                        .IsUnique()
+                        .HasDatabaseName("ix_diagnostics_student_id_kind");
+
+                    b.ToTable("diagnostics", (string)null);
+                });
+
             modelBuilder.Entity("SuraqQoi.Api.Data.Question", b =>
                 {
                     b.Property<Guid>("Id")
@@ -162,6 +221,10 @@ namespace SuraqQoi.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<bool>("DiagnosticPostOpen")
+                        .HasColumnType("boolean")
+                        .HasColumnName("diagnostic_post_open");
+
                     b.Property<string>("JoinCode")
                         .IsRequired()
                         .HasColumnType("text")
@@ -203,6 +266,10 @@ namespace SuraqQoi.Api.Migrations
                     b.Property<string>("Conclusion")
                         .HasColumnType("text")
                         .HasColumnName("conclusion");
+
+                    b.Property<string>("ConclusionComment")
+                        .HasColumnType("text")
+                        .HasColumnName("conclusion_comment");
 
                     b.Property<short?>("ConclusionScore")
                         .HasColumnType("smallint")
@@ -305,9 +372,16 @@ namespace SuraqQoi.Api.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("email");
+
+                    b.Property<int>("FailedLogins")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_logins");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_until");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -333,6 +407,18 @@ namespace SuraqQoi.Api.Migrations
                         .HasDatabaseName("ix_users_email");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("SuraqQoi.Api.Data.Diagnostic", b =>
+                {
+                    b.HasOne("SuraqQoi.Api.Data.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_diagnostics_students_student_id");
+
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("SuraqQoi.Api.Data.Question", b =>

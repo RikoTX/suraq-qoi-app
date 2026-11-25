@@ -7,6 +7,19 @@
     <UserSecretsId>d1b0e9ab-1012-498c-b14e-05c180acb053</UserSecretsId>
   </PropertyGroup>
 
+  <!-- Тесты — отдельный проект в tests/, в сборку API не входят (ТЗ, 5.2). -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
+  <!-- Задания мини-диагностики (ТЗ, 11.1) — внутри сборки, чтобы попасть и в Docker-образ. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Data/Diagnostics/forms.json" LogicalName="SuraqQoi.Api.Data.Diagnostics.forms.json" />
+    <Content Remove="Data/Diagnostics/forms.json" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.1" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />

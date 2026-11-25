@@ -10,6 +10,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ReadingText> Texts => Set<ReadingText>();
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<Question> Questions => Set<Question>();
+    public DbSet<Diagnostic> Diagnostics => Set<Diagnostic>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -60,6 +61,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.Property(x => x.Id).ValueGeneratedNever();
             e.HasOne(x => x.Session).WithMany(x => x.Questions)
                 .HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Diagnostic>(e =>
+        {
+            e.ToTable("diagnostics");
+            e.Property(x => x.Id).ValueGeneratedNever();
+            e.Property(x => x.Kind).HasMaxLength(4);
+            e.Property(x => x.Form).HasMaxLength(1);
+            e.Property(x => x.Lang).HasMaxLength(2);
+            e.Property(x => x.Answers).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.StudentId, x.Kind }).IsUnique();
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

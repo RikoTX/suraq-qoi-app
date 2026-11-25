@@ -7,7 +7,7 @@ namespace SuraqQoi.Api.Auth;
 
 public sealed record RegisterRequest(string Name, string Email, string Password, string Role);
 public sealed record LoginRequest(string Email, string Password);
-public sealed record UserDto(Guid Id, string Name, string Email, string Role);
+public sealed record UserDto(Guid Id, string Name, string? Email, string Role);
 public sealed record AuthResponse(string Token, UserDto User);
 
 public static class AuthEndpoints
@@ -33,13 +33,14 @@ public static class AuthEndpoints
         if ((req.Password ?? "").Length < MinPasswordLength) errors["password"] = [$"Пароль: минимум {MinPasswordLength} символов"];
 
         // Админа нельзя зарегистрировать через форму — только через настройки сервера.
+        // Ученик регистрируется без email — по коду класса (StudentAuthEndpoints, ТЗ 7.0.1).
         UserRole? role = req.Role?.ToLowerInvariant() switch
         {
-            "student" => UserRole.Student,
             "teacher" => UserRole.Teacher,
             _ => null,
         };
-        if (role is null) errors["role"] = ["Роль: student или teacher"];
+        if (req.Role?.ToLowerInvariant() == "student") errors["role"] = ["Ученики входят по коду класса, без email"];
+        else if (role is null) errors["role"] = ["Роль: teacher"];
 
         if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
 
@@ -56,9 +57,6 @@ public static class AuthEndpoints
             CreatedAt = DateTimeOffset.UtcNow,
         };
         db.Users.Add(user);
-        if (user.Role == UserRole.Student)
-            db.Students.Add(new Student { Id = Guid.NewGuid(), UserId = user.Id, CreatedAt = user.CreatedAt });
-
         await db.SaveChangesAsync(ct);
         return TypedResults.Ok(new AuthResponse(jwt.Create(user), ToDto(user)));
     }
@@ -81,7 +79,7 @@ public static class AuthEndpoints
         return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(ToDto(user));
     }
 
-    private static UserDto ToDto(User u) => new(u.Id, u.Name, u.Email, u.Role.ToApi());
+    internal static UserDto ToDto(User u) => new(u.Id, u.Name, u.Email, u.Role.ToApi());
 
     private static string? NormalizeEmail(string? email)
     {

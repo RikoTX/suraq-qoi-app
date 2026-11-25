@@ -6,7 +6,8 @@ export interface AuthState {
   token: string | null
   /** true, пока проверяем сохранённый токен при запуске */
   loading: boolean
-  signIn: (auth: AuthResponse) => void
+  /** pin — для ученика: запомнить его на устройстве, чтобы потом переключаться без сети */
+  signIn: (auth: AuthResponse, pin?: string) => void
   signOut: () => void
 }
 

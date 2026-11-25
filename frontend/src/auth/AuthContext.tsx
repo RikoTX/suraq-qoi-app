@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError, authApi, type AuthResponse } from './api'
-import { clearLocalData } from '../offline/db'
+import { saveProfile } from '../offline/profiles'
 import { AuthContext, type AuthState } from './useAuth'
 
 const STORAGE_KEY = 'suraq-qoi.auth'
@@ -18,14 +18,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthResponse | null>(readStored)
   const [loading, setLoading] = useState(auth !== null)
 
-  const signIn = useCallback((next: AuthResponse) => {
+  const signIn = useCallback((next: AuthResponse, pin?: string) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setAuth(next)
+    // Ученика запоминаем на устройстве: телефон может быть общим на нескольких детей (ТЗ, 7.0.2).
+    if (next.user.role === 'student' && pin !== undefined) void saveProfile(next, pin)
   }, [])
 
+  /**
+   * Выход. Ученик при этом остаётся в списке «Кто занимается?» на устройстве вместе с его сессиями
+   * и очередью отправки — убрать его можно там же. Учитель и админ выходят полностью.
+   */
   const signOut = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
-    void clearLocalData()
     setAuth(null)
   }, [])
 

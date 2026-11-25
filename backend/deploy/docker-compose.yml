@@ -1,0 +1,61 @@
+# Сервер «Сұрақ қой» (ТЗ, 13): Caddy (HTTPS + фронтенд) → API → PostgreSQL.
+# Запуск из корня репозитория: docker compose -f backend/deploy/docker-compose.yml up -d --build
+# Настройки — в backend/deploy/.env (образец: .env.example). Наружу открыты только 80 и 443.
+name: suraqqoi
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  caddy:
+    build: ../../frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Укажите DOMAIN в backend/deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+    logging: *logging
+
+  api:
+    build: ..
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=suraqqoi;Username=suraqqoi;Password=${POSTGRES_PASSWORD:?Укажите POSTGRES_PASSWORD}
+      Jwt__Secret: ${JWT_SECRET:?Укажите JWT_SECRET (не короче 32 символов)}
+      OpenAI__ApiKey: ${OPENAI_API_KEY:-}
+      OpenAI__Endpoint: ${OPENAI_ENDPOINT:-https://api.groq.com/openai/v1}
+      Admin__Email: ${ADMIN_EMAIL:-}
+      Admin__Password: ${ADMIN_PASSWORD:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+    logging: *logging
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: suraqqoi
+      POSTGRES_USER: suraqqoi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Укажите POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U suraqqoi -d suraqqoi"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logging
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
