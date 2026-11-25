@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "backend"],
+      "port": 8080
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "mise",
+      "runtimeArgs": ["exec", "-C", "frontend", "--", "npm", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}

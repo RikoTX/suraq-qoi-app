@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SuraqQoi.Api.Auth;
 using SuraqQoi.Api.Data;
+using SuraqQoi.Api.Features.Classes;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,7 @@ app.MapGet("/health", async (AppDbContext db, CancellationToken ct) =>
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
 app.MapAuth();
+app.MapClasses();
 
 await AdminSeeder.SeedAsync(app.Services, app.Configuration, app.Logger);
 

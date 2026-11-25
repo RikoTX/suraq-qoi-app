@@ -5,6 +5,7 @@ import { useAuth } from './auth/useAuth'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ClassPage } from './pages/teacher/ClassPage'
 
 /** Только для вошедших. Остальных отправляем на вход. */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -26,6 +27,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
+          <Route path="/teacher/classes/:id" element={<RequireAuth><ClassPage /></RequireAuth>} />
           <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
           <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
           <Route path="*" element={<Navigate to="/" replace />} />
