@@ -204,6 +204,10 @@ namespace SuraqQoi.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("conclusion");
 
+                    b.Property<string>("ConclusionComment")
+                        .HasColumnType("text")
+                        .HasColumnName("conclusion_comment");
+
                     b.Property<short?>("ConclusionScore")
                         .HasColumnType("smallint")
                         .HasColumnName("conclusion_score");

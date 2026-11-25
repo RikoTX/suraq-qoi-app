@@ -6,9 +6,11 @@ using SuraqQoi.Api.Auth;
 using SuraqQoi.Api.Data;
 using SuraqQoi.Api.Features.Admin;
 using SuraqQoi.Api.Features.Classes;
+using SuraqQoi.Api.Features.Sessions;
 using SuraqQoi.Api.Features.Texts;
 using SuraqQoi.Api.Data.DevSeed;
 using SuraqQoi.Api.Services.Content;
+using SuraqQoi.Api.Services.Grading;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +54,7 @@ builder.Services.AddRateLimiter(o =>
 });
 
 builder.Services.AddScoped<TextGenerator>();
+builder.Services.AddSingleton<IGradingService, OpenAiGradingService>();
 
 var app = builder.Build();
 
@@ -71,6 +74,15 @@ if (args.FirstOrDefault() == "generate-texts")
     return saved > 0 ? 0 : 1;
 }
 
+// CLI: dotnet run -- seed-demo — демо-класс с историей за 14 дней (ТЗ, D1)
+if (args.FirstOrDefault() == "seed-demo")
+{
+    Console.OutputEncoding = System.Text.Encoding.UTF8;
+    using var scope = app.Services.CreateScope();
+    Console.WriteLine(await DemoSeeder.RunAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), CancellationToken.None));
+    return 0;
+}
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
@@ -86,6 +98,7 @@ app.MapAuth();
 app.MapStudentAuth();
 app.MapClasses();
 app.MapTexts();
+app.MapSessions();
 app.MapAdmin();
 
 await AdminSeeder.SeedAsync(app.Services, app.Configuration, app.Logger);

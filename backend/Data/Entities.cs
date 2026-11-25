@@ -88,6 +88,7 @@ public sealed class Session
     public Guid TextId { get; set; }
     public string? Conclusion { get; set; }
     public short? ConclusionScore { get; set; }
+    public string? ConclusionComment { get; set; }
     public int Points { get; set; }
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? FinishedAt { get; set; }

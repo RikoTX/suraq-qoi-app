@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/useAuth'
@@ -6,6 +6,9 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { TextReadPage } from './pages/student/TextReadPage'
+import { ResultPage } from './pages/student/ResultPage'
+import { SessionPage } from './pages/student/SessionPage'
+import { startOutboxSync } from './offline/outbox'
 import { ClassPage } from './pages/teacher/ClassPage'
 import { LibraryPage } from './pages/teacher/LibraryPage'
 import { TeacherTextPage } from './pages/teacher/TeacherTextPage'
@@ -25,6 +28,8 @@ function GuestOnly({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  // Очередь отправки работает для всех учеников на устройстве, на любом экране (ТЗ, 8).
+  useEffect(() => startOutboxSync(), [])
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -32,6 +37,8 @@ export default function App() {
           <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
           <Route path="/teacher/classes/:id" element={<RequireAuth><ClassPage /></RequireAuth>} />
           <Route path="/texts/:id" element={<RequireAuth><TextReadPage /></RequireAuth>} />
+          <Route path="/texts/:id/ask" element={<RequireAuth><SessionPage /></RequireAuth>} />
+          <Route path="/results/:id" element={<RequireAuth><ResultPage /></RequireAuth>} />
           <Route path="/teacher/texts/:id" element={<RequireAuth><TeacherTextPage /></RequireAuth>} />
           <Route path="/teacher/classes/:classId/texts/new" element={<RequireAuth><TeacherTextPage /></RequireAuth>} />
           <Route path="/teacher/classes/:classId/library" element={<RequireAuth><LibraryPage /></RequireAuth>} />
