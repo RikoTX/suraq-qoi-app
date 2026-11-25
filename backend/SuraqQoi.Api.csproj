@@ -7,6 +7,13 @@
     <UserSecretsId>d1b0e9ab-1012-498c-b14e-05c180acb053</UserSecretsId>
   </PropertyGroup>
 
+  <!-- Тесты — отдельный проект в tests/, в сборку API не входят (ТЗ, 5.2). -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.1" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
