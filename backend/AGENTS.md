@@ -38,6 +38,7 @@ dotnet run                    # http://localhost:8080
 | `tests/` | xUnit (`dotnet test tests`); `heuristic-cases.json` — общие примеры с фронтендом. `tests/Integration/` — настоящий API (`WebApplicationFactory`) на временной базе в Postgres из `docker compose` (или `TEST_POSTGRES`), ИИ заменён `FakeGrader`; без базы — `--filter Category!=Integration` |
 | `Services/Content/TextGenerator.cs` | Генерация текстов через Groq/OpenAI (команда `generate-texts`) |
 | `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста. `DemoSeeder` — `dotnet run -- seed-demo`: учитель `demo-teacher@suraqqoi.kz` / `demo-teacher-2026`, класс «8А (демо)», 15 учеников с PIN `1234`, история за 14 дней, диагностика до/после |
+| `Features/Pilot/` | `dotnet run -- pilot-report <код> [--since 2026-11-26] [--names]` — отчёт по пилоту в markdown (ТЗ, 11; сценарий — `docs/PILOT.md`) |
 | `Data/LibraryTransfer.cs` | `export-texts` / `import-texts file.json` — перенос общей библиотеки между базами (без дублей) |
 | `Dockerfile`, `deploy/` | Сервер: Caddy + API + PostgreSQL (`deploy/docker-compose.yml`, `deploy/Caddyfile`, `.env.example`), инструкция — `deploy/README.md` |
 | `Features/<Фича>/` | Новые эндпоинты — по папке на фичу |

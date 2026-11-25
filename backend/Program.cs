@@ -8,6 +8,7 @@ using SuraqQoi.Api.Data;
 using SuraqQoi.Api.Features.Admin;
 using SuraqQoi.Api.Features.Classes;
 using SuraqQoi.Api.Features.Diagnostics;
+using SuraqQoi.Api.Features.Pilot;
 using SuraqQoi.Api.Features.Sessions;
 using SuraqQoi.Api.Features.Teacher;
 using SuraqQoi.Api.Features.Texts;
@@ -99,6 +100,16 @@ if (args.FirstOrDefault() == "seed-demo")
     using var scope = app.Services.CreateScope();
     Console.WriteLine(await DemoSeeder.RunAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), CancellationToken.None));
     return 0;
+}
+
+// CLI: dotnet run -- pilot-report 8A-1234 [--since 2026-11-26] [--names] — цифры пилота для слайдов (ТЗ, 11)
+if (args.FirstOrDefault() == "pilot-report")
+{
+    Console.OutputEncoding = System.Text.Encoding.UTF8;
+    using var scope = app.Services.CreateScope();
+    var (code, text) = await PilotReport.RunAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), args, CancellationToken.None);
+    (code == 0 ? Console.Out : Console.Error).WriteLine(text);
+    return code;
 }
 
 // CLI: dotnet run -- export-texts library.json / import-texts library.json — перенос общей библиотеки текстов
