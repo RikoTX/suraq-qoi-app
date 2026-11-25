@@ -14,7 +14,8 @@ export interface SchoolClass {
 export interface ClassStudent {
   id: string
   name: string
-  email: string
+  /** null — ученик входит по PIN */
+  email: string | null
   points: number
   streak: number
   lastActiveDate: string | null
@@ -45,6 +46,9 @@ export const classesApi = {
   /** Убрать ученика из класса. Аккаунт остаётся — он сможет вступить по коду в нужный класс. */
   removeStudent: (token: string, classId: string, studentId: string) =>
     request<void>(`/classes/${classId}/students/${studentId}`, { method: 'DELETE' }, token),
+  /** Новый временный PIN ученику (забыл или заблокирован после 5 ошибок). */
+  resetPin: (token: string, classId: string, studentId: string) =>
+    request<{ pin: string }>(`/classes/${classId}/students/${studentId}/reset-pin`, { method: 'POST' }, token),
 }
 
 /** Ученик: профиль и вступление в класс. */

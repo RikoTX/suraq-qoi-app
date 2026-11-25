@@ -305,9 +305,16 @@ namespace SuraqQoi.Api.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("email");
+
+                    b.Property<int>("FailedLogins")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_logins");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_until");
 
                     b.Property<string>("Name")
                         .IsRequired()

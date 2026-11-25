@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SuraqQoi.Api.Auth;
@@ -41,6 +42,15 @@ builder.Services.AddProblemDetails();
 // Некорректный JSON в запросе → 400, а не 500 (в Development по умолчанию бросается исключение).
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = false);
 
+// Подбор кода класса и PIN ученика: не больше 30 попыток в минуту с одного адреса.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy(RateLimits.StudentAuth, ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
+});
+
 builder.Services.AddScoped<TextGenerator>();
 
 var app = builder.Build();
@@ -65,6 +75,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/health", async (AppDbContext db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct)
@@ -72,6 +83,7 @@ app.MapGet("/health", async (AppDbContext db, CancellationToken ct) =>
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
 app.MapAuth();
+app.MapStudentAuth();
 app.MapClasses();
 app.MapTexts();
 app.MapAdmin();

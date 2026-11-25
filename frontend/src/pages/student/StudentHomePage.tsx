@@ -5,10 +5,11 @@ import { useAuth } from '../../auth/useAuth'
 import { AppLayout } from '../../components/AppLayout'
 import { Button } from '../../components/Button'
 import { TextField } from '../../components/TextField'
-import { clearTexts, getMeta, setMeta } from '../../offline/db'
+import { getMeta, setMeta } from '../../offline/db'
+import { updateProfileClass } from '../../offline/profiles'
 import { TextList } from './TextList'
 
-const ME_KEY = 'studentMe'
+const meKey = (userId: string) => `studentMe:${userId}`
 
 /** Главная ученика. Без класса — ввод кода; с классом — карточка класса и тексты. */
 export function StudentHomePage() {
@@ -17,22 +18,22 @@ export function StudentHomePage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!token) return
+    if (!token || !user) return
     studentApi
       .me(token)
       .then((m) => {
         setMe(m)
-        void setMeta(ME_KEY, JSON.stringify(m))
-        // Учитель убрал из класса — тексты прежнего класса с телефона стираем.
-        if (!m.class) void clearTexts()
+        void setMeta(meKey(user.id), JSON.stringify(m))
+        // Класс ученика на устройстве; убрали из класса — тексты прежнего класса стираются.
+        void updateProfileClass(user.id, m.class)
       })
       .catch(async (e) => {
         // Нет связи — берём профиль с прошлого входа, чтобы тексты открывались офлайн.
-        const cached = await getMeta(ME_KEY)
+        const cached = await getMeta(meKey(user.id))
         if (cached && e instanceof ApiError && e.offline) setMe(JSON.parse(cached) as StudentMe)
         else setError(e instanceof ApiError ? e.message : 'Не удалось загрузить профиль')
       })
-  }, [token])
+  }, [token, user])
 
   return (
     <AppLayout
@@ -62,11 +63,14 @@ export function StudentHomePage() {
           onJoined={(c) => {
             const next = { ...me, class: c }
             setMe(next)
-            void setMeta(ME_KEY, JSON.stringify(next))
+            if (user) {
+              void setMeta(meKey(user.id), JSON.stringify(next))
+              void updateProfileClass(user.id, c)
+            }
           }}
         />
       )}
-      {me?.class && <TextList lang={me.class.lang} />}
+      {me?.class && <TextList classId={me.class.id} />}
     </AppLayout>
   )
 }

@@ -10,7 +10,7 @@ namespace SuraqQoi.Api.Features.Classes;
 public sealed record CreateClassRequest(string Name, string Lang);
 public sealed record JoinClassRequest(string JoinCode);
 public sealed record ClassDto(Guid Id, string Name, string JoinCode, string Lang, int StudentCount, DateTimeOffset CreatedAt);
-public sealed record ClassStudentDto(Guid Id, string Name, string Email, int Points, int Streak, DateOnly? LastActiveDate);
+public sealed record ClassStudentDto(Guid Id, string Name, string? Email, int Points, int Streak, DateOnly? LastActiveDate);
 public sealed record StudentClassDto(Guid Id, string Name, string Lang, string TeacherName);
 public sealed record StudentMeDto(string Name, int Points, int Streak, StudentClassDto? Class);
 
@@ -157,7 +157,7 @@ public static class ClassEndpoints
     }
 
     /// <summary>Код вводят как попало: «8а-4821», « 8A 4821 ». Приводим к виду «8A-4821».</summary>
-    private static string NormalizeCode(string? raw)
+    internal static string NormalizeCode(string? raw)
     {
         var s = new string((raw ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
         s = Translit(s);

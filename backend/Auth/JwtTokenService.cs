@@ -34,12 +34,14 @@ public sealed class JwtTokenService(JwtOptions options)
             Expires = DateTime.UtcNow.AddDays(options.LifetimeDays),
             SigningCredentials = new SigningCredentials(options.SigningKey(), SecurityAlgorithms.HmacSha256),
             Subject = new ClaimsIdentity(
-            [
-                new Claim(Claims.Sub, user.Id.ToString()),
-                new Claim(Claims.Email, user.Email),
-                new Claim(Claims.Name, user.Name),
-                new Claim(Claims.Role, user.Role.ToApi()),
-            ]),
+                new[]
+                {
+                    new Claim(Claims.Sub, user.Id.ToString()),
+                    new Claim(Claims.Name, user.Name),
+                    new Claim(Claims.Role, user.Role.ToApi()),
+                }
+                // У ученика email нет — в токен его не пишем.
+                .Concat(user.Email is null ? [] : [new Claim(Claims.Email, user.Email)])),
         };
         return new JsonWebTokenHandler().CreateToken(descriptor);
     }

@@ -9,12 +9,18 @@ public enum UserRole
     Admin,
 }
 
-/// <summary>Учётная запись. Роль определяет, что пользователь видит и может делать.</summary>
+/// <summary>
+/// Учётная запись. Роль определяет, что пользователь видит и может делать.
+/// У ученика нет email (ТЗ, 7.0.1): он входит по коду класса + имени + PIN, PasswordHash — хеш PIN.
+/// </summary>
 public sealed class User
 {
     public Guid Id { get; set; }
-    public required string Email { get; set; }
+    public string? Email { get; set; }
     public required string PasswordHash { get; set; }
+    /// <summary>Неверные PIN подряд; после 5 — блокировка входа ученика на 10 минут.</summary>
+    public int FailedLogins { get; set; }
+    public DateTimeOffset? LockedUntil { get; set; }
     public required string Name { get; set; }
     public UserRole Role { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

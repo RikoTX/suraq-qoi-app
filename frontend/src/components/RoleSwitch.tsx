@@ -12,7 +12,7 @@ type Props = {
   onChange: (role: SelfRole) => void
 }
 
-/** Выбор роли при регистрации. Роль «админ» через форму не выдаётся. */
+/** Выбор «ученик / учитель» на экране входа. Роль «админ» через форму не выдаётся. */
 export function RoleSwitch({ value, onChange }: Props) {
   return (
     <div role="radiogroup" aria-label="Роль" className="grid grid-cols-2 gap-3">

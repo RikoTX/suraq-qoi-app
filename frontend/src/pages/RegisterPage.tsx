@@ -1,16 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { ApiError, authApi, type Role } from '../auth/api'
+import { ApiError, authApi } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { AuthLayout } from '../components/AuthLayout'
 import { Button } from '../components/Button'
-import { RoleSwitch } from '../components/RoleSwitch'
 import { TextField } from '../components/TextField'
 
 export function RegisterPage() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
-  const [role, setRole] = useState<Exclude<Role, 'admin'>>('student')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,7 +22,7 @@ export function RegisterPage() {
     setFieldErrors({})
     setLoading(true)
     try {
-      signIn(await authApi.register({ name, email, password, role }))
+      signIn(await authApi.register({ name, email, password }))
       navigate('/', { replace: true })
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length > 0) setFieldErrors(err.fields)
@@ -35,14 +33,12 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthLayout title="Создать аккаунт" subtitle="Это займёт меньше минуты">
+    <AuthLayout title="Аккаунт учителя" subtitle="Ученикам регистрироваться не нужно: они входят по коду класса">
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
-        <RoleSwitch value={role} onChange={setRole} />
-
         <TextField
           label="Имя"
           autoComplete="given-name"
-          placeholder={role === 'student' ? 'Например, Айгерим' : 'Например, Айгуль Сериковна'}
+          placeholder="Например, Айгуль Сериковна"
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={fieldErrors.name}

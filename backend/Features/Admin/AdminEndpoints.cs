@@ -9,7 +9,7 @@ public sealed record AdminStats(
     int ClassTexts, int PublishedTexts, int LibraryTexts, int Sessions, int Questions,
     int NewUsers7Days);
 
-public sealed record AdminUserDto(Guid Id, string Name, string Email, string Role, DateTimeOffset CreatedAt, string? Info);
+public sealed record AdminUserDto(Guid Id, string Name, string? Email, string Role, DateTimeOffset CreatedAt, string? Info);
 public sealed record AdminClassDto(Guid Id, string Name, string JoinCode, string Lang, string TeacherName, int Students, int Texts, int PublishedTexts, DateTimeOffset CreatedAt);
 
 /// <summary>Админ наблюдает за проектом: кто зарегистрирован, какие классы, общая статистика. Контент не правит.</summary>

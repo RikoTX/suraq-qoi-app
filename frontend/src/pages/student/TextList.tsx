@@ -10,9 +10,9 @@ import { syncPack } from '../../offline/pack'
 type SyncState = 'syncing' | 'ok' | 'offline'
 
 /** Тексты ученика: показываем то, что уже на устройстве, и тихо докачиваем новое. */
-export function TextList({ lang }: { lang: string }) {
+export function TextList({ classId }: { classId: string }) {
   const { token } = useAuth()
-  const texts = useLiveQuery(() => db.texts.where('lang').equals(lang).sortBy('difficulty'), [lang])
+  const texts = useLiveQuery(() => db.texts.where('classId').equals(classId).sortBy('difficulty'), [classId])
   const [sync, setSync] = useState<SyncState>('syncing')
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export function TextList({ lang }: { lang: string }) {
     let cancelled = false
     const run = () => {
       setSync('syncing')
-      syncPack(token, lang)
+      syncPack(token, classId)
         .then(() => !cancelled && setSync('ok'))
         .catch((e) => !cancelled && setSync(e instanceof ApiError && !e.offline ? 'ok' : 'offline'))
     }
@@ -30,7 +30,7 @@ export function TextList({ lang }: { lang: string }) {
       cancelled = true
       window.removeEventListener('online', run)
     }
-  }, [token, lang])
+  }, [token, classId])
 
   return (
     <section>

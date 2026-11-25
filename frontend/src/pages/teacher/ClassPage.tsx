@@ -43,6 +43,18 @@ export function ClassPage() {
     }
   }
 
+  async function resetPin(s: ClassStudent) {
+    if (!token || !id) return
+    if (!confirm(`Выдать ${s.name} новый PIN? Старый перестанет работать.`)) return
+    setError(null)
+    try {
+      const { pin } = await classesApi.resetPin(token, id, s.id)
+      alert(`Новый PIN для ${s.name}: ${pin}\n\nПродиктуйте его ученику. Он может войти сразу.`)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Не удалось сбросить PIN')
+    }
+  }
+
   async function copy() {
     if (!cls) return
     try {
@@ -97,8 +109,8 @@ export function ClassPage() {
           </h2>
           {data.students.length === 0 && (
             <p className="mt-4 rounded-3xl bg-primary-soft p-5 text-muted">
-              Пока никого. Продиктуйте ученикам код <b className="text-ink">{data.class.joinCode}</b> — они введут
-              его после регистрации.
+              Пока никого. Продиктуйте ученикам код <b className="text-ink">{data.class.joinCode}</b>: на экране входа
+              они выберут «Я ученик», введут код, своё имя и придумают PIN. Email не нужен.
             </p>
           )}
           <div className="mt-5 space-y-3">
@@ -107,10 +119,20 @@ export function ClassPage() {
                 key={s.id}
                 icon={s.name.slice(0, 1).toUpperCase()}
                 title={s.name}
-                subtitle={s.email}
+                subtitle={s.email ?? 'Вход по PIN'}
                 trailing={
                   <span className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-sm font-medium text-primary">{s.points} очк.</span>
+                    {!s.email && (
+                      <button
+                        type="button"
+                        onClick={() => resetPin(s)}
+                        className="rounded-xl px-2 py-1 text-xs font-medium text-primary hover:bg-primary-soft"
+                        aria-label={`Новый PIN для ${s.name}`}
+                      >
+                        Новый PIN
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => removeStudent(s)}
