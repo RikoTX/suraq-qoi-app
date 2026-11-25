@@ -7,6 +7,7 @@ import { Button } from '../../components/Button'
 import { TextField } from '../../components/TextField'
 import { getMeta, setMeta } from '../../offline/db'
 import { updateProfileClass } from '../../offline/profiles'
+import { ProgressCard } from './ProgressCard'
 import { TextList } from './TextList'
 
 const meKey = (userId: string) => `studentMe:${userId}`
@@ -24,6 +25,8 @@ export function StudentHomePage() {
       .then((m) => {
         setMe(m)
         void setMeta(meKey(user.id), JSON.stringify(m))
+        // Свежие очки с сервера (учитель мог поправить оценку) — для карточки прогресса.
+        void setMeta(`progress:${user.id}`, JSON.stringify({ points: m.points, rank: m.rank, streak: m.streak }))
         // Класс ученика на устройстве; убрали из класса — тексты прежнего класса стираются.
         void updateProfileClass(user.id, m.class)
       })
@@ -70,7 +73,12 @@ export function StudentHomePage() {
           }}
         />
       )}
-      {me?.class && <TextList classId={me.class.id} />}
+      {me?.class && user && (
+        <div className="space-y-8">
+          <ProgressCard userId={user.id} fallback={{ points: me.points, rank: me.rank, streak: me.streak }} />
+          <TextList classId={me.class.id} />
+        </div>
+      )}
     </AppLayout>
   )
 }

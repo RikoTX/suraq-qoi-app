@@ -31,6 +31,8 @@ export interface StudentClass {
 export interface StudentMe {
   name: string
   points: number
+  /** novice | sleuth | detective | professor | master */
+  rank: string
   streak: number
   class: StudentClass | null
 }
