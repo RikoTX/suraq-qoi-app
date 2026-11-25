@@ -31,12 +31,13 @@ dotnet run                    # http://localhost:8080
 | `Features/Texts/` | Этап 3: тексты класса учителя (создать, ИИ, из библиотеки, править, опубликовать), `/api/library`, `GET /api/student/pack` |
 | `Features/Admin/` | Обзор для админа: `/api/admin/stats`, `/users`, `/classes` (только чтение) |
 | `Features/Sessions/` | `POST /api/student/sessions` — приём сессий из очереди устройства, идемпотентно, оценка ИИ в бюджете 6,5 с |
-| `Features/Teacher/` | `/api/classes/{id}/overview` (карта навыков, сигналы), `/api/students/{id}`, `PATCH /api/questions/{id}` |
+| `Features/Teacher/` | `/api/classes/{id}/overview` (карта навыков, сигналы, диагностика), `/api/students/{id}`, `PATCH /api/questions/{id}` |
+| `Features/Diagnostics/`, `Data/Diagnostics/` | Мини-диагностика (ТЗ, 11.1): `GET /api/student/diagnostic`, `POST /api/student/diagnostics`, `PUT /api/classes/{id}/diagnostic`; задания — `forms.json` (встроен в сборку, черновик — проверяет учитель) |
 | `Services/Grading/` | `OpenAiGradingService` (Groq/OpenAI, строгая схема; без ключа в Development — правилами), `GradingPrompts`, `HeuristicGrader` (копия — `frontend/src/scoring/heuristic.ts`) |
 | `Services/Scoring/PointsCalculator.cs` | Очки, ранги, стрик, «предварительные» сессии |
 | `tests/` | xUnit (`dotnet test tests`); `heuristic-cases.json` — общие примеры с фронтендом |
 | `Services/Content/TextGenerator.cs` | Генерация текстов через Groq/OpenAI (команда `generate-texts`) |
-| `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста. `DemoSeeder` — `dotnet run -- seed-demo`: учитель `demo-teacher@suraqqoi.kz` / `demo-teacher-2026`, класс «8А (демо)», 15 учеников с PIN `1234`, история за 14 дней |
+| `Data/DevSeed/` | Только Development: 4 примера текстов в библиотеку, если таблица `texts` пуста. `DemoSeeder` — `dotnet run -- seed-demo`: учитель `demo-teacher@suraqqoi.kz` / `demo-teacher-2026`, класс «8А (демо)», 15 учеников с PIN `1234`, история за 14 дней, диагностика до/после |
 | `Data/LibraryTransfer.cs` | `export-texts` / `import-texts file.json` — перенос общей библиотеки между базами (без дублей) |
 | `Dockerfile`, `deploy/` | Сервер: Caddy + API + PostgreSQL (`deploy/docker-compose.yml`, `deploy/Caddyfile`, `.env.example`), инструкция — `deploy/README.md` |
 | `Features/<Фича>/` | Новые эндпоинты — по папке на фичу |

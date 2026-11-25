@@ -1,6 +1,7 @@
 import { sessionsApi, type SessionUpload, type UploadResponse } from '../api/sessions'
 import { ApiError } from '../auth/api'
 import { db, setMeta, type LocalQuestion, type LocalSession } from './db'
+import { sendDiagnostics, usersWithDueDiagnostics } from './diagnostics'
 
 /** Повтор отправки: 5 с, 15 с, 60 с, затем раз в 5 минут (ТЗ, 8). */
 const BACKOFF_MS = [5_000, 15_000, 60_000, 300_000]
@@ -31,12 +32,15 @@ async function run(force: boolean) {
   const due = (await db.outbox.toArray()).filter((i) => force || i.nextAt <= now)
   const byUser = new Map<string, typeof due>()
   for (const item of due) byUser.set(item.userId, [...(byUser.get(item.userId) ?? []), item])
+  for (const userId of await usersWithDueDiagnostics(force)) if (!byUser.has(userId)) byUser.set(userId, [])
   for (const [userId, items] of byUser) {
     const profile = await db.profiles.get(userId)
     if (!profile) continue
     for (let i = 0; i < items.length; i += BATCH) {
       await sendBatch(profile.auth.token, userId, items.slice(i, i + BATCH).map((x) => x.sessionId))
     }
+    // Мини-диагностика (ТЗ, 11.1) — той же очередью, с тем же токеном ученика.
+    await sendDiagnostics(profile.auth.token, userId, force)
   }
 }
 

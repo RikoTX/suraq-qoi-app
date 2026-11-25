@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { TextReadPage } from './pages/student/TextReadPage'
 import { ResultPage } from './pages/student/ResultPage'
+import { DiagnosticPage } from './pages/student/DiagnosticPage'
 import { SessionPage } from './pages/student/SessionPage'
 import { startOutboxSync } from './offline/outbox'
 
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/texts/:id" element={<RequireAuth><TextReadPage /></RequireAuth>} />
             <Route path="/texts/:id/ask" element={<RequireAuth><SessionPage /></RequireAuth>} />
             <Route path="/results/:id" element={<RequireAuth><ResultPage /></RequireAuth>} />
+            <Route path="/diagnostic/:kind" element={<RequireAuth><DiagnosticPage /></RequireAuth>} />
             <Route path="/teacher/students/:id" element={<RequireAuth><StudentProfilePage /></RequireAuth>} />
             <Route path="/teacher/texts/:id" element={<RequireAuth><TeacherTextPage /></RequireAuth>} />
             <Route path="/teacher/classes/:classId/texts/new" element={<RequireAuth><TeacherTextPage /></RequireAuth>} />

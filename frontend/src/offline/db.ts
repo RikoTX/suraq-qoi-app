@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import type { DiagnosticKind } from '../api/diagnostics'
 import type { ReadingText } from '../api/texts'
 import type { AuthResponse } from '../auth/api'
 
@@ -68,6 +69,26 @@ export interface OutboxItem {
   nextAt: number
 }
 
+/**
+ * Мини-диагностика, пройденная на устройстве (ТЗ, 11.1). Ждёт отправки, пока synced = false;
+ * score и skills сначала свои, после отправки — с сервера.
+ */
+export interface LocalDiagnostic {
+  id: string
+  userId: string
+  kind: DiagnosticKind
+  form: 'A' | 'B'
+  lang: 'kk' | 'ru'
+  answers: number[]
+  score: number
+  skills: number[]
+  startedAt: string
+  finishedAt: string
+  synced: boolean
+  attempts: number
+  nextAt: number
+}
+
 /** Локальная база ученика (ТЗ, раздел 8). */
 export const db = new Dexie('suraq-qoi') as Dexie & {
   profiles: EntityTable<Profile, 'userId'>
@@ -75,6 +96,7 @@ export const db = new Dexie('suraq-qoi') as Dexie & {
   sessions: EntityTable<LocalSession, 'id'>
   questions: EntityTable<LocalQuestion, 'id'>
   outbox: EntityTable<OutboxItem, 'seq'>
+  diagnostics: EntityTable<LocalDiagnostic, 'id'>
   meta: EntityTable<Meta, 'key'>
 }
 
@@ -97,6 +119,17 @@ db.version(2)
     // Пакет v1 хранил версию без класса — скачаем заново.
     await tx.table('meta').bulkDelete(['packVersion', 'packLang', 'studentMe'])
   })
+
+// v3: мини-диагностика.
+db.version(3).stores({
+  profiles: 'userId',
+  texts: 'id, classId, lang, difficulty, topic',
+  sessions: 'id, userId, textId, finishedAt',
+  questions: 'id, sessionId',
+  outbox: '++seq, userId, sessionId',
+  diagnostics: 'id, userId',
+  meta: 'key',
+})
 
 export async function getMeta(key: string): Promise<string | null> {
   return (await db.meta.get(key))?.value ?? null

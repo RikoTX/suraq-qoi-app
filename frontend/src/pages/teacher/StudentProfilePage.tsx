@@ -58,6 +58,9 @@ export function StudentProfilePage() {
               {rank.emoji} {rank.label} · {data.points} очк.
             </p>
             {data.streak > 0 && <p className="mt-1 text-sm text-muted">🔥 {data.streak} дн. подряд</p>}
+            <p className="mt-1 text-sm text-muted">
+              Проверка чтения: до — {data.diagnosticPre ?? '—'}, после — {data.diagnosticPost ?? '—'} (из 6)
+            </p>
           </div>
         )
       }

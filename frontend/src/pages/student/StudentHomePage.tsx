@@ -7,8 +7,10 @@ import { Button } from '../../components/Button'
 import { TextField } from '../../components/TextField'
 import { getMeta, setMeta } from '../../offline/db'
 import { updateProfileClass } from '../../offline/profiles'
+import { DiagnosticCard } from './DiagnosticCard'
 import { ProgressCard } from './ProgressCard'
 import { TextList } from './TextList'
+import { useDiagnosticPlan } from './useDiagnosticPlan'
 
 const meKey = (userId: string) => `studentMe:${userId}`
 
@@ -73,13 +75,25 @@ export function StudentHomePage() {
           }}
         />
       )}
-      {me?.class && user && (
-        <div className="space-y-8">
-          <ProgressCard userId={user.id} fallback={{ points: me.points, rank: me.rank, streak: me.streak }} />
-          <TextList classId={me.class.id} />
-        </div>
-      )}
+      {me?.class && user && <ClassHome userId={user.id} token={token} me={me} classId={me.class.id} />}
     </AppLayout>
+  )
+}
+
+function ClassHome({ userId, token, me, classId }: { userId: string; token: string | null; me: StudentMe; classId: string }) {
+  const diagnostic = useDiagnosticPlan(userId, token)
+  if (diagnostic === undefined) return <p className="text-muted">Загрузка…</p>
+  return (
+    <div className="space-y-8">
+      <DiagnosticCard plan={diagnostic} />
+      {/* Входная проверка — до первого текста, иначе она уже не «входная» (ТЗ, 11.1). */}
+      {!diagnostic.blocking && (
+        <>
+          <ProgressCard userId={userId} fallback={{ points: me.points, rank: me.rank, streak: me.streak }} />
+          <TextList classId={classId} />
+        </>
+      )}
+    </div>
   )
 }
 

@@ -41,18 +41,20 @@ export async function unlockProfile(p: Profile, pin: string): Promise<boolean> {
 }
 
 /** Неотправленные сессии ученика: пока они есть, убрать его с устройства нельзя. */
-export function pendingCount(userId: string) {
-  return db.outbox.where('userId').equals(userId).count()
+export async function pendingCount(userId: string) {
+  const diagnostics = await db.diagnostics.where('userId').equals(userId).filter((d) => !d.synced).count()
+  return (await db.outbox.where('userId').equals(userId).count()) + diagnostics
 }
 
 /** Убрать ученика с устройства вместе с его сессиями. */
 export async function removeProfile(userId: string) {
-  await db.transaction('rw', [db.profiles, db.sessions, db.questions, db.outbox, db.meta], async () => {
+  await db.transaction('rw', [db.profiles, db.sessions, db.questions, db.outbox, db.diagnostics, db.meta], async () => {
     const sessionIds = await db.sessions.where('userId').equals(userId).primaryKeys()
     await db.questions.where('sessionId').anyOf(sessionIds).delete()
     await db.sessions.bulkDelete(sessionIds)
     await db.outbox.where('userId').equals(userId).delete()
-    await db.meta.bulkDelete([`studentMe:${userId}`, `progress:${userId}`])
+    await db.diagnostics.where('userId').equals(userId).delete()
+    await db.meta.bulkDelete([`studentMe:${userId}`, `progress:${userId}`, `diagnostic:${userId}`])
     await db.profiles.delete(userId)
   })
   await pruneTexts()

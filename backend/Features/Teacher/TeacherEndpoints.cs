@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SuraqQoi.Api.Auth;
 using SuraqQoi.Api.Data;
+using SuraqQoi.Api.Features.Diagnostics;
 using SuraqQoi.Api.Services.Scoring;
 
 namespace SuraqQoi.Api.Features.Teacher;
@@ -9,7 +10,7 @@ namespace SuraqQoi.Api.Features.Teacher;
 /// <summary>Сигнал для учителя (ТЗ, 11): stuck — застрял, inactive — пропал, rising — растёт.</summary>
 public sealed record OverviewStudentDto(
     Guid Id, string Name, int Points, string Rank, int Streak, DateOnly? LastActiveDate,
-    int Sessions7, int Questions7, double Depth7, string? Signal);
+    int Sessions7, int Questions7, double Depth7, string? Signal, int? DiagnosticPre, int? DiagnosticPost);
 
 /// <summary>
 /// SkillMap7 — число оценённых вопросов уровней 0–4 за 7 дней; AvgLevel7 — средний уровень;
@@ -18,7 +19,7 @@ public sealed record OverviewStudentDto(
 public sealed record ClassOverviewDto(
     Guid Id, string Name, string JoinCode, string Lang,
     int[] SkillMap7, double? AvgLevel7, double ActiveShare7, double? Depth7, double? DepthPrev7,
-    List<OverviewStudentDto> Students);
+    DiagnosticSummaryDto Diagnostic, List<OverviewStudentDto> Students);
 
 public sealed record ProfileQuestionDto(
     Guid Id, int Position, string Body, int? LevelLocal, int? LevelAi, int? LevelTeacher, string? AiComment, string? AiHint);
@@ -28,7 +29,8 @@ public sealed record ProfileSessionDto(
     string? Conclusion, int? ConclusionScore, string? ConclusionComment, List<ProfileQuestionDto> Questions);
 
 public sealed record StudentProfileDto(
-    Guid Id, string Name, Guid ClassId, string ClassName, int Points, string Rank, int Streak, List<ProfileSessionDto> Sessions);
+    Guid Id, string Name, Guid ClassId, string ClassName, int Points, string Rank, int Streak,
+    int? DiagnosticPre, int? DiagnosticPost, List<ProfileSessionDto> Sessions);
 
 public sealed record SetLevelRequest(int? LevelTeacher);
 
@@ -71,6 +73,8 @@ public static class TeacherEndpoints
         var last7 = graded.Where(q => q.FinishedAt >= weekAgo).ToList();
         var prev7 = graded.Where(q => q.FinishedAt < weekAgo).ToList();
 
+        var (diagnostic, diagByStudent) = await DiagnosticEndpoints.SummaryAsync(cls, db, ct);
+
         var map = new int[5];
         foreach (var q in last7) map[q.Level!.Value]++;
 
@@ -91,7 +95,8 @@ public static class TeacherEndpoints
 
             return new OverviewStudentDto(s.Id, s.Name, s.Points, PointsCalculator.Rank(s.Points),
                 s.LastActiveDate >= today.AddDays(-1) ? s.Streak : 0, s.LastActiveDate,
-                sessions7, mine7.Count, Math.Round(depth7, 2), signal);
+                sessions7, mine7.Count, Math.Round(depth7, 2), signal,
+                diagByStudent.GetValueOrDefault(s.Id).Pre, diagByStudent.GetValueOrDefault(s.Id).Post);
         })
         .OrderByDescending(r => r.Points).ThenBy(r => r.Name)
         .ToList();
@@ -103,7 +108,7 @@ public static class TeacherEndpoints
             students.Count > 0 ? Math.Round((double)active / students.Count, 2) : 0,
             Depth(last7.Select(q => q.Level!.Value)) is { } d7 ? Math.Round(d7, 2) : null,
             Depth(prev7.Select(q => q.Level!.Value)) is { } dp ? Math.Round(dp, 2) : null,
-            rows));
+            diagnostic, rows));
     }
 
     /// <summary>Доля вопросов уровней 3–4; null — вопросов нет.</summary>
@@ -126,9 +131,11 @@ public static class TeacherEndpoints
             .OrderByDescending(s => s.FinishedAt).Take(SessionsInProfile)
             .ToListAsync(ct);
         var today = PointsCalculator.LocalDate(DateTimeOffset.UtcNow);
+        var diag = await db.Diagnostics.Where(d => d.StudentId == id).Select(d => new { d.Kind, d.Score }).ToListAsync(ct);
         return TypedResults.Ok(new StudentProfileDto(
             student.Id, student.User!.Name, student.Class!.Id, student.Class.Name, student.Points, PointsCalculator.Rank(student.Points),
             student.LastActiveDate >= today.AddDays(-1) ? student.Streak : 0,
+            diag.FirstOrDefault(d => d.Kind == "pre")?.Score, diag.FirstOrDefault(d => d.Kind == "post")?.Score,
             sessions.Select(ToDto).ToList()));
     }
 

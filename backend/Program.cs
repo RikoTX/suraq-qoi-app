@@ -7,6 +7,7 @@ using SuraqQoi.Api.Auth;
 using SuraqQoi.Api.Data;
 using SuraqQoi.Api.Features.Admin;
 using SuraqQoi.Api.Features.Classes;
+using SuraqQoi.Api.Features.Diagnostics;
 using SuraqQoi.Api.Features.Sessions;
 using SuraqQoi.Api.Features.Teacher;
 using SuraqQoi.Api.Features.Texts;
@@ -139,6 +140,7 @@ app.MapClasses();
 app.MapTexts();
 app.MapSessions();
 app.MapTeacher();
+app.MapDiagnostics();
 app.MapAdmin();
 
 await AdminSeeder.SeedAsync(app.Services, app.Configuration, app.Logger);

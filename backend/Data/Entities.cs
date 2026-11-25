@@ -35,6 +35,8 @@ public sealed class SchoolClass
     public required string Name { get; set; }
     public required string JoinCode { get; set; }
     public required string Lang { get; set; }
+    /// <summary>Учитель открыл итоговую диагностику всему классу, не дожидаясь 10 сессий (ТЗ, 11.1).</summary>
+    public bool DiagnosticPostOpen { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
     public User? Teacher { get; set; }
@@ -113,4 +115,24 @@ public sealed class Question
     public DateTimeOffset CreatedAt { get; set; }
 
     public Session? Session { get; set; }
+}
+
+/// <summary>
+/// Мини-диагностика ученика (ТЗ, 11.1): pre — входная, post — итоговая, у каждого не больше одной каждого вида.
+/// Answers — индексы выбранных вариантов (jsonb), Score — верных из 6 (проверяет сервер). id генерирует клиент.
+/// </summary>
+public sealed class Diagnostic
+{
+    public Guid Id { get; set; }
+    public Guid StudentId { get; set; }
+    public required string Kind { get; set; } // "pre" | "post"
+    public required string Form { get; set; } // "A" | "B"
+    public required string Lang { get; set; }
+    public required string Answers { get; set; } // jsonb: [1, 2, 0, ...]
+    public short Score { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset TakenAt { get; set; }
+    public DateTimeOffset ReceivedAt { get; set; }
+
+    public Student? Student { get; set; }
 }

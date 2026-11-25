@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using SuraqQoi.Api.Data.Diagnostics;
 using SuraqQoi.Api.Services.Scoring;
 
 namespace SuraqQoi.Api.Data.DevSeed;
@@ -8,6 +9,7 @@ namespace SuraqQoi.Api.Data.DevSeed;
 /// <summary>
 /// Демо-данные для показа панели учителя (ТЗ, D1): учитель, класс «8А (демо)» из 15 учеников
 /// и их сессии за 14 дней — у большинства вопросы постепенно становятся глубже, двое «застряли», один пропал.
+/// Мини-диагностика: входная у всех, итоговая — у всех, кроме пропавшего (учитель открыл её классу).
 /// Запуск: dotnet run -- seed-demo. Повторный запуск ничего не меняет.
 /// Все данные выдуманы и помечены как демо; вход учителя и PIN — в backend/AGENTS.md.
 /// </summary>
@@ -76,7 +78,7 @@ public static class DemoSeeder
         string joinCode;
         do joinCode = $"8A-{RandomNumberGenerator.GetInt32(1000, 10000)}";
         while (await db.Classes.AnyAsync(c => c.JoinCode == joinCode, ct));
-        var cls = new SchoolClass { Id = Guid.NewGuid(), TeacherId = teacher.Id, Name = ClassName, JoinCode = joinCode, Lang = "ru", CreatedAt = teacher.CreatedAt };
+        var cls = new SchoolClass { Id = Guid.NewGuid(), TeacherId = teacher.Id, Name = ClassName, JoinCode = joinCode, Lang = "ru", DiagnosticPostOpen = true, CreatedAt = teacher.CreatedAt };
         db.Users.Add(teacher);
         db.Classes.Add(cls);
 
@@ -133,10 +135,38 @@ public static class DemoSeeder
                 sessions.Add(session);
             }
             db.Sessions.AddRange(sessions);
+
+            // Диагностика: вероятность верного ответа по навыкам [найти, связать, оценить] растёт вместе с вопросами.
+            // Свой генератор: история сессий остаётся той же, что и без диагностики.
+            var drnd = new Random(100 + i);
+            var preForm = DiagnosticForms.PreFormFor(student.Id);
+            var stuck = i is 3 or 9;
+            db.Diagnostics.Add(DemoDiagnostic(drnd, student.Id, "pre", preForm, start, 0, teacher.CreatedAt.AddHours(20)));
+            if (i != 12)
+                db.Diagnostics.Add(DemoDiagnostic(drnd, student.Id, "post", DiagnosticForms.Other(preForm), start, stuck ? 0.2 : growth, now.AddHours(-3 - drnd.Next(20))));
             PointsCalculator.Recalculate(student, sessions, now);
         }
 
         await db.SaveChangesAsync(ct);
         return $"Готово. Учитель: {TeacherEmail} / {TeacherPassword}. Класс {ClassName}, код {joinCode}, 15 учеников, PIN {StudentPin}.";
+    }
+
+    private static Diagnostic DemoDiagnostic(Random rnd, Guid studentId, string kind, string form, double start, double growth, DateTimeOffset takenAt)
+    {
+        double[] baseP = [0.75, 0.5, 0.25];
+        double[] gain = [0.05, 0.12, 0.14];
+        var tasks = DiagnosticForms.Get(form, "ru")!.Texts.SelectMany(t => t.Tasks).ToList();
+        var answers = tasks.Select(t =>
+        {
+            var k = Array.IndexOf(DiagnosticForms.Skills, t.Skill);
+            var p = Math.Clamp(baseP[k] + (start - 0.9) * 0.15 + growth * gain[k], 0.05, 0.95);
+            return rnd.NextDouble() < p ? t.Answer : (t.Answer + 1 + rnd.Next(t.Options.Length - 1)) % t.Options.Length;
+        }).ToArray();
+        return new Diagnostic
+        {
+            Id = Guid.NewGuid(), StudentId = studentId, Kind = kind, Form = form, Lang = "ru",
+            Answers = JsonSerializer.Serialize(answers), Score = (short)DiagnosticForms.Score(form, "ru", answers)!.Total,
+            StartedAt = takenAt.AddMinutes(-8), TakenAt = takenAt, ReceivedAt = takenAt,
+        };
     }
 }

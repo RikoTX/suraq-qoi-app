@@ -16,6 +16,26 @@ export interface OverviewStudent {
   /** доля вопросов уровней 3–4 за 7 дней, 0–1 */
   depth7: number
   signal: Signal | null
+  /** мини-диагностика: верных из 6 */
+  diagnosticPre: number | null
+  diagnosticPost: number | null
+}
+
+export interface DiagnosticStat {
+  count: number
+  /** средний балл из 6 */
+  avg: number
+  /** средние по навыкам [найти, связать, оценить], из 2 */
+  skills: number[]
+}
+
+/** Мини-диагностика класса (ТЗ, 11.1). paired — только ученики, прошедшие обе проверки. */
+export interface DiagnosticSummary {
+  postOpen: boolean
+  postAfterSessions: number
+  pre: DiagnosticStat | null
+  post: DiagnosticStat | null
+  paired: { count: number; preAvg: number; postAvg: number } | null
 }
 
 export interface ClassOverview {
@@ -29,6 +49,7 @@ export interface ClassOverview {
   activeShare7: number
   depth7: number | null
   depthPrev7: number | null
+  diagnostic: DiagnosticSummary
   students: OverviewStudent[]
 }
 
@@ -63,6 +84,8 @@ export interface StudentProfile {
   points: number
   rank: string
   streak: number
+  diagnosticPre: number | null
+  diagnosticPost: number | null
   sessions: ProfileSession[]
 }
 
@@ -77,6 +100,9 @@ export const teacherApi = {
       { method: 'PATCH', body: JSON.stringify({ levelTeacher }) },
       token,
     ),
+  /** Открыть итоговую диагностику всему классу, не дожидаясь 10 сессий */
+  setPostOpen: (token: string, classId: string, postOpen: boolean) =>
+    request<{ postOpen: boolean }>(`/classes/${classId}/diagnostic`, { method: 'PUT', body: JSON.stringify({ postOpen }) }, token),
 }
 
 export const SIGNAL_LABEL: Record<Signal, { label: string; emoji: string; hint: string }> = {
